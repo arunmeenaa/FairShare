@@ -1,36 +1,4 @@
-const nodemailer = require("nodemailer");
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  family: 4,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-});
-const dns = require("dns");
-
-dns.resolve4("smtp.gmail.com", (err, addresses) => {
-  if (err) {
-    console.error("DNS IPv4 failed:", err);
-  } else {
-    console.log("Gmail IPv4 addresses:", addresses);
-  }
-});
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("SMTP connection failed:", error);
-  } else {
-    console.log("SMTP server is ready");
-  }
-});
+const axios = require("axios");
 
 const sendEmail = async ({ to, subject, html }) => {
   if (!to) {
@@ -38,24 +6,46 @@ const sendEmail = async ({ to, subject, html }) => {
   }
 
   try {
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to,
-      subject,
-      html,
-    });
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: process.env.BREVO_FROM_NAME || "FairShare",
+          email: process.env.BREVO_FROM_EMAIL,
+        },
 
-    console.log("Email sent:", info.messageId);
+        to: [
+          {
+            email: to,
+          },
+        ],
 
-    return info;
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          accept: "application/json",
+          "api-key": process.env.BREVO_API_KEY,
+          "content-type": "application/json",
+        },
+
+        timeout: 30000,
+      },
+    );
+
+    console.log("Email sent successfully:", response.data?.messageId);
+
+    return response.data;
   } catch (error) {
-    console.error("Email sending failed:", error.message);
+    console.error(
+      "Brevo email sending failed:",
+      error.response?.data || error.message,
+    );
 
-    // Important:
     // Don't break the main API request if email fails.
   }
 };
-
 const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
   return sendEmail({
     to: recipient.email,
@@ -63,7 +53,14 @@ const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
     subject: `New expense: ${expense.description}`,
 
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+      <div
+        style="
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: auto;
+        "
+      >
+
         <h2 style="color: #2563eb;">
           FairShare
         </h2>
@@ -78,47 +75,100 @@ const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
           A new expense has been added to your household.
         </p>
 
-        <table style="border-collapse: collapse; width: 100%;">
+        <table
+          style="
+            border-collapse: collapse;
+            width: 100%;
+          "
+        >
+
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Description
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ${expense.description}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Amount
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ₹${Number(expense.amount).toFixed(2)}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Paid by
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ${expense.paidBy?.name || "Household member"}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Your share
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ₹${Number(share).toFixed(2)}
             </td>
           </tr>
+
         </table>
 
         <p style="margin-top: 20px;">
-          You can open FairShare to view the complete expense details.
+          You can open FairShare to view
+          the complete expense details.
         </p>
+
       </div>
     `,
   });
@@ -131,7 +181,14 @@ const sendExpenseUpdatedEmail = async ({ recipient, expense, share }) => {
     subject: `Expense updated: ${expense.description}`,
 
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+      <div
+        style="
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: auto;
+        "
+      >
+
         <h2 style="color: #2563eb;">
           FairShare
         </h2>
@@ -143,46 +200,99 @@ const sendExpenseUpdatedEmail = async ({ recipient, expense, share }) => {
         </p>
 
         <p>
-          An expense in your household has been updated.
+          An expense in your household
+          has been updated.
         </p>
 
-        <table style="border-collapse: collapse; width: 100%;">
+        <table
+          style="
+            border-collapse: collapse;
+            width: 100%;
+          "
+        >
+
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Description
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ${expense.description}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Updated amount
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ₹${Number(expense.amount).toFixed(2)}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Paid by
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ${expense.paidBy?.name || "Household member"}
             </td>
           </tr>
 
           <tr>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               Your share
             </td>
-            <td style="padding: 8px; border: 1px solid #ddd;">
+
+            <td
+              style="
+                padding: 8px;
+                border: 1px solid #ddd;
+              "
+            >
               ₹${Number(share).toFixed(2)}
             </td>
           </tr>
+
         </table>
+
       </div>
     `,
   });
@@ -197,7 +307,14 @@ const sendAvailabilityEmail = async ({ recipient, memberName, status }) => {
     subject: `${memberName} is now ${isAway ? "Away" : "Available"}`,
 
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+      <div
+        style="
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: auto;
+        "
+      >
+
         <h2 style="color: #2563eb;">
           FairShare
         </h2>
@@ -213,7 +330,9 @@ const sendAvailabilityEmail = async ({ recipient, memberName, status }) => {
         <p>
           <strong>${memberName}</strong>
           is now marked as
-          <strong>${isAway ? "Away" : "Available"}</strong>.
+          <strong>
+            ${isAway ? "Away" : "Available"}
+          </strong>.
         </p>
 
         <p>
@@ -223,6 +342,7 @@ const sendAvailabilityEmail = async ({ recipient, memberName, status }) => {
               : "This member can now participate in automatic expense splitting."
           }
         </p>
+
       </div>
     `,
   });
