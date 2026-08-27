@@ -14,7 +14,6 @@ const notificationRoutes = require("./routes/notification.routes");
 const profileRoutes = require("./routes/profile.routes");
 const emailRoutes = require("./routes/email.routes");
 
-
 const { initializeSocket } = require("./config/socket");
 const {
   startWeeklySettlementEmailJob,
@@ -28,9 +27,20 @@ const server = http.createServer(app);
 
 initializeSocket(server);
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://fairshare-splits.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
@@ -51,7 +61,6 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/profile", profileRoutes);
-
 
 const port = process.env.PORT || 5000;
 server.listen(port, () => {
