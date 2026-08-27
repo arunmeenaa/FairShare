@@ -2,6 +2,7 @@ const Availability = require("../model/availability.model");
 const Household = require("../model/household.model");
 const { createNotification } = require("../services/notification.service");
 const { notifyHousehold } = require("../services/notification.service");
+const { sendAvailabilityEmail } = require("../services/email.service");
 
 const getAvailability = async (req, res) => {
   try {
@@ -90,7 +91,7 @@ const updateAvailability = async (req, res) => {
     );
 
     const userName = member?.user?.name || "A household member";
-    
+
     await notifyHousehold({
       householdId,
       type: "availability_changed",
@@ -108,7 +109,31 @@ const updateAvailability = async (req, res) => {
       },
       excludeUserId: req.user._id,
     });
+    const otherMembers = household.members.filter(
+      (member) =>
+        member.isActive && member.user.toString() !== req.user._id.toString(),
+    );
+    const populatedHousehold = await Household.findById(householdId).populate(
+      "members.user",
+      "name email",
+    );
+    for (const member of populatedHousehold.members) {
+      if (
+        !member.isActive ||
+        !member.user ||
+        member.user._id.toString() === req.user._id.toString()
+      ) {
+        continue;
+      }
 
+      sendAvailabilityEmail({
+        recipient: member.user,
+        memberName: userName,
+        status,
+      }).catch((error) => {
+        console.error("Availability email failed:", error.message);
+      });
+    }
     res.status(200).json({
       message: `Availability changed to ${status}`,
       availability,
@@ -148,8 +173,17 @@ const deleteAvailability = async (req, res) => {
   }
 };
 
+const isUserAway = async ({ householdId, userId }) => {
+  const availability = await Availability.findOne({
+    household: householdId,
+    user: userId,
+  });
+
+  return availability?.status === "away";
+};
 module.exports = {
   getAvailability,
   updateAvailability,
   deleteAvailability,
+  isUserAway,
 };

@@ -23,10 +23,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
 
   doc.pipe(res);
 
-  // =========================
-  // HEADER
-  // =========================
-
   doc.fontSize(28).font("Helvetica-Bold").text("FairShare", {
     align: "center",
   });
@@ -38,10 +34,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
   doc.moveDown(1.5);
 
   drawLine(doc);
-
-  // =========================
-  // HOUSEHOLD
-  // =========================
 
   doc.fontSize(15).font("Helvetica-Bold").text(household.name);
 
@@ -59,10 +51,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
 
   drawLine(doc);
 
-  // =========================
-  // EXPENSE
-  // =========================
-
   doc.fontSize(16).font("Helvetica-Bold").text("Expense Details");
 
   doc.moveDown(0.5);
@@ -77,10 +65,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
 
   doc.moveDown();
 
-  // =========================
-  // PAYER
-  // =========================
-
   doc.fontSize(16).font("Helvetica-Bold").text("Payment Information");
 
   doc.moveDown(0.5);
@@ -91,10 +75,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
     .text(`${expense.paidBy.name} paid ₹${expense.amount.toFixed(2)}`);
 
   doc.moveDown();
-
-  // =========================
-  // SPLIT
-  // =========================
 
   doc.fontSize(16).font("Helvetica-Bold").text("Split Details");
 
@@ -123,10 +103,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
     doc.fontSize(10).text(`Reason: ${expense.participantReason}`);
   }
 
-  // =========================
-  // SPECIAL RULE
-  // =========================
-
   if (expense.category === "grocery") {
     doc.moveDown();
 
@@ -142,10 +118,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
       );
   }
 
-  // =========================
-  // AUDIT
-  // =========================
-
   doc.moveDown();
 
   doc.fontSize(16).font("Helvetica-Bold").text("Record Information");
@@ -159,10 +131,6 @@ const generateExpenseReceipt = async (expense, household, res) => {
     .text(`Created At: ${formatDate(expense.createdAt)}`)
     .text(`Last Updated: ${formatDate(expense.updatedAt)}`)
     .text(`Record Version: ${expense.version}`);
-
-  // =========================
-  // QR CODE
-  // =========================
 
   doc.moveDown(1);
 

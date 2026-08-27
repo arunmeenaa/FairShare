@@ -567,7 +567,42 @@ const Expenses = () => {
                   </button>
                 </div>
               </div>
+              {createdExpense?.excludedMembers?.length > 0 && (
+                <div className="mt-5">
+                  <h3 className="mb-3 text-sm font-bold text-slate-900">
+                    Not included
+                  </h3>
 
+                  <div className="space-y-2">
+                    {createdExpense.excludedMembers.map((member) => (
+                      <div
+                        key={member.user?._id || member.user}
+                        className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
+                            {getInitial(member.user?.name)}
+                          </div>
+
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              {member.user?.name || "Unknown"}
+                            </p>
+
+                            <p className="text-xs text-amber-700">
+                              Away — not included in this expense
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-xs font-semibold text-slate-500">
+                          ₹0.00
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Manual participants */}
 
               {form.participantMode === "manual" && (

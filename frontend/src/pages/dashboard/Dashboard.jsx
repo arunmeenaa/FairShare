@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { useHousehold } from "../../context/HouseholdContext";
+import { useAuth } from "../../context/AuthContext";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { currentHousehold, loading: householdLoading } = useHousehold();
+  const { user } = useAuth();
 
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,17 +25,19 @@ const Dashboard = () => {
         const month = currentDate.getMonth() + 1;
         const year = currentDate.getFullYear();
 
-        const response = await api.get(`/reports/monthly/${householdId}`, {
-          params: {
-            month,
-            year,
+        const response = await api.get(
+          `/reports/monthly/${householdId}`,
+          {
+            params: {
+              month,
+              year,
+            },
           },
-        });
+        );
 
         setReport(response.data);
       } catch (error) {
         console.error("Failed to fetch dashboard:", error);
-
         setReport(null);
       } finally {
         setLoading(false);
@@ -60,15 +65,52 @@ const Dashboard = () => {
   const getMonthName = (month) => {
     if (!month) return "";
 
-    return new Date(2000, month - 1, 1).toLocaleString("en-IN", {
-      month: "long",
+    return new Date(2000, month - 1, 1).toLocaleString(
+      "en-IN",
+      {
+        month: "long",
+      },
+    );
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
     });
   };
 
-  const balance = report?.currentUser?.balance || 0;
+  const balance = Number(
+    report?.currentUser?.balance || 0,
+  );
 
   const balancePositive = balance > 0;
   const balanceNegative = balance < 0;
+
+  /*
+   * Check whether the current user was away
+   * for this particular expense.
+   */
+  const wasCurrentUserAway = (expense) => {
+    return expense?.excludedMembers?.some(
+      (member) =>
+        member.user?._id?.toString() ===
+        user?._id?.toString(),
+    );
+  };
+
+  /*
+   * Get names of members who were away.
+   */
+  const getAwayMembers = (expense) => {
+    return (
+      expense?.excludedMembers
+        ?.filter((member) => member.reason === "away")
+        ?.map((member) => member.user?.name)
+        ?.filter(Boolean) || []
+    );
+  };
 
   if (loading) {
     return (
@@ -85,7 +127,10 @@ const Dashboard = () => {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="h-36 rounded-2xl bg-white shadow-sm" />
+              <div
+                key={item}
+                className="h-36 rounded-2xl bg-white shadow-sm"
+              />
             ))}
           </div>
 
@@ -124,8 +169,9 @@ const Dashboard = () => {
             </h1>
 
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-              You haven't selected a household yet. Select or join a household
-              to start tracking your shared expenses.
+              You haven't selected a household yet. Select or
+              join a household to start tracking your shared
+              expenses.
             </p>
           </div>
         </div>
@@ -136,10 +182,14 @@ const Dashboard = () => {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
+
         {/* ================= HEADER ================= */}
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-600">Overview</p>
+            <p className="text-sm font-medium text-indigo-600">
+              Overview
+            </p>
 
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               Dashboard
@@ -171,39 +221,39 @@ const Dashboard = () => {
         </div>
 
         {/* ================= STAT CARDS ================= */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Total spending */}
-          <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-start justify-between">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50">
-                <svg
-                  className="h-5 w-5 text-indigo-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeWidth={1.8}
-                    d="M6 2h12M6 22h12M8 2v4a4 4 0 002 3.46L12 10l2-1.54A4 4 0 0016 6V2M8 22v-4a4 4 0 012-3.46L12 13l2 1.54A4 4 0 0016 18v4"
-                  />
-                </svg>
-              </div>
 
-              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-400">
-                MONTHLY
-              </span>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+          {/* Total */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50">
+              <svg
+                className="h-5 w-5 text-indigo-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeWidth={1.8}
+                  d="M6 2h12M6 22h12M8 2v4a4 4 0 002 3.46L12 10l2-1.54A4 4 0 0016 6V2M8 22v-4a4 4 0 012-3.46L12 13l2 1.54A4 4 0 0016 18v4"
+                />
+              </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">Total spending</p>
+            <p className="mt-5 text-sm text-slate-500">
+              Total spending
+            </p>
 
-            <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-slate-900">
               {formatCurrency(report?.totalSpending)}
             </p>
           </div>
 
-          {/* You paid */}
-          <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          {/* Paid */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
               <svg
                 className="h-5 w-5 text-blue-600"
@@ -220,15 +270,18 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">You paid</p>
+            <p className="mt-5 text-sm text-slate-500">
+              You paid
+            </p>
 
-            <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-slate-900">
               {formatCurrency(report?.currentUser?.paid)}
             </p>
           </div>
 
-          {/* Your share */}
-          <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          {/* Share */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50">
               <svg
                 className="h-5 w-5 text-violet-600"
@@ -236,7 +289,12 @@ const Dashboard = () => {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <circle cx="12" cy="12" r="8" strokeWidth={1.8} />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="8"
+                  strokeWidth={1.8}
+                />
 
                 <path
                   strokeLinecap="round"
@@ -246,15 +304,18 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">Your share</p>
+            <p className="mt-5 text-sm text-slate-500">
+              Your share
+            </p>
 
-            <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-slate-900">
               {formatCurrency(report?.currentUser?.share)}
             </p>
           </div>
 
           {/* Balance */}
-          <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div
               className={`flex h-11 w-11 items-center justify-center rounded-xl ${
                 balancePositive
@@ -284,10 +345,12 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">Your balance</p>
+            <p className="mt-5 text-sm text-slate-500">
+              Your balance
+            </p>
 
             <p
-              className={`mt-1 text-2xl font-bold tracking-tight ${
+              className={`mt-1 text-2xl font-bold ${
                 balancePositive
                   ? "text-emerald-600"
                   : balanceNegative
@@ -317,8 +380,11 @@ const Dashboard = () => {
         </div>
 
         {/* ================= MAIN SUMMARY ================= */}
+
         <div className="grid gap-6 lg:grid-cols-3">
+
           {/* Spending overview */}
+
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex items-start justify-between">
               <div>
@@ -327,7 +393,8 @@ const Dashboard = () => {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Your household activity for {getMonthName(report?.month)}.
+                  Your household activity for{" "}
+                  {getMonthName(report?.month)}.
                 </p>
               </div>
 
@@ -336,7 +403,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Visual spending bar */}
             <div className="mt-8">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -353,10 +419,12 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Personal comparison */}
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
+
               <div className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Your contribution</p>
+                <p className="text-sm text-slate-500">
+                  Your contribution
+                </p>
 
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatCurrency(report?.currentUser?.paid)}
@@ -370,7 +438,7 @@ const Dashboard = () => {
                         report?.totalSpending
                           ? Math.min(
                               100,
-                              (report.currentUser?.paid /
+                              ((report.currentUser?.paid || 0) /
                                 report.totalSpending) *
                                 100,
                             )
@@ -382,7 +450,9 @@ const Dashboard = () => {
               </div>
 
               <div className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">Your share</p>
+                <p className="text-sm text-slate-500">
+                  Your share
+                </p>
 
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatCurrency(report?.currentUser?.share)}
@@ -396,7 +466,7 @@ const Dashboard = () => {
                         report?.totalSpending
                           ? Math.min(
                               100,
-                              (report.currentUser?.share /
+                              ((report.currentUser?.share || 0) /
                                 report.totalSpending) *
                                 100,
                             )
@@ -409,7 +479,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Balance card */}
+          {/* Balance */}
+
           <div className="relative overflow-hidden rounded-2xl bg-indigo-600 p-6 shadow-sm">
             <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-indigo-500/60" />
 
@@ -419,7 +490,11 @@ const Dashboard = () => {
               </p>
 
               <h2 className="mt-3 text-3xl font-bold text-white">
-                {balancePositive ? "+" : balanceNegative ? "-" : ""}
+                {balancePositive
+                  ? "+"
+                  : balanceNegative
+                    ? "-"
+                    : ""}
                 {formatCurrency(Math.abs(balance))}
               </h2>
 
@@ -433,7 +508,9 @@ const Dashboard = () => {
 
               <div className="mt-8 rounded-xl bg-white/10 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-indigo-200">Paid</span>
+                  <span className="text-sm text-indigo-200">
+                    Paid
+                  </span>
 
                   <span className="font-semibold text-white">
                     {formatCurrency(report?.currentUser?.paid)}
@@ -443,7 +520,9 @@ const Dashboard = () => {
                 <div className="my-3 h-px bg-white/10" />
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-indigo-200">Share</span>
+                  <span className="text-sm text-indigo-200">
+                    Share
+                  </span>
 
                   <span className="font-semibold text-white">
                     {formatCurrency(report?.currentUser?.share)}
@@ -454,7 +533,140 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* ================= RECENT EXPENSES ================= */}
+
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Recent expenses
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Latest household expenses this month.
+              </p>
+            </div>
+
+            <Link
+              to="/expenses"
+              className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-700"
+            >
+              View all
+            </Link>
+          </div>
+
+          {report?.recentExpenses?.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+
+              {report.recentExpenses.map((expense) => {
+                const awayMembers = getAwayMembers(expense);
+                const currentUserAway =
+                  wasCurrentUserAway(expense);
+
+                return (
+                  <Link
+                    key={expense._id}
+                    to={`/expenses/${expense._id}`}
+                    className="block px-6 py-4 transition hover:bg-slate-50"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+
+                      <div className="flex min-w-0 items-center gap-4">
+
+                        {/* Category icon */}
+
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-lg">
+                          {expense.category === "grocery"
+                            ? "🛒"
+                            : expense.category === "electricity"
+                              ? "⚡"
+                              : expense.category === "internet"
+                                ? "🌐"
+                                : expense.category === "rent"
+                                  ? "🏠"
+                                  : expense.category === "dining"
+                                    ? "🍽️"
+                                    : "💳"}
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-slate-900">
+                            {expense.description}
+                          </p>
+
+                          <p className="mt-0.5 text-sm text-slate-500">
+                            Paid by{" "}
+                            <span className="font-medium text-slate-700">
+                              {expense.paidBy?.name ||
+                                "Unknown"}
+                            </span>
+                            {" • "}
+                            {formatDate(expense.date)}
+                          </p>
+
+                          {/* Away indicator */}
+
+                          {currentUserAway ? (
+                            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                              <span>●</span>
+                              You were away
+                            </div>
+                          ) : awayMembers.length > 0 ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <span className="text-xs text-slate-400">
+                                Away:
+                              </span>
+
+                              {awayMembers.map((name) => (
+                                <span
+                                  key={name}
+                                  className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p className="font-bold text-slate-900">
+                          {formatCurrency(expense.amount)}
+                        </p>
+
+                        {expense.participantMode ===
+                          "manual" && (
+                          <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600">
+                            Manual split
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-6 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                <span className="text-xl">💸</span>
+              </div>
+
+              <p className="mt-3 font-medium text-slate-700">
+                No expenses yet
+              </p>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add your first household expense to get started.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* ================= CATEGORY SUMMARY ================= */}
+
         {report?.categoryTotals &&
           Object.keys(report.categoryTotals).length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -473,12 +685,16 @@ const Dashboard = () => {
                   .sort(([, a], [, b]) => b - a)
                   .map(([category, amount]) => {
                     const percentage = report.totalSpending
-                      ? Math.round((amount / report.totalSpending) * 100)
+                      ? Math.round(
+                          (amount / report.totalSpending) * 100,
+                        )
                       : 0;
 
                     const label = category
                       .replace(/_/g, " ")
-                      .replace(/\b\w/g, (char) => char.toUpperCase());
+                      .replace(/\b\w/g, (char) =>
+                        char.toUpperCase(),
+                      );
 
                     return (
                       <div
@@ -515,6 +731,7 @@ const Dashboard = () => {
           )}
 
         {/* ================= FOOTER INSIGHT ================= */}
+
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
@@ -538,12 +755,14 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-1 text-sm leading-6 text-indigo-700">
-                Your dashboard shows your household's spending and your
-                contribution for the current month.
+                Your dashboard shows your household's spending,
+                contribution, and recent activity for the current
+                month.
               </p>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

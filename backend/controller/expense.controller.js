@@ -5,6 +5,9 @@ const createAuditLog = require("../utils/createAuditLog");
 const { generateExpenseReceipt } = require("../services/receipt.service");
 const { getEligibleParticipants } = require("../services/expense.service");
 const { createNotification } = require("../services/notification.service");
+const { sendNewExpenseEmail } = require("../services/email.service");
+const { isUserAway } = require("../controller/availability.controller");
+
 
 const createExpense = async (req, res) => {
   try {
@@ -39,12 +42,9 @@ const createExpense = async (req, res) => {
     }
 
     if (participantMode === "manual") {
-      if (
-        !Array.isArray(manualParticipants) ||
-        manualParticipants.length === 0
-      ) {
+      if (!Array.isArray(manualParticipants) || manualParticipants.length < 2) {
         return res.status(400).json({
-          message: "Participants are required for manual splitting",
+          message: "At least two participants are required for an expense",
         });
       }
 
@@ -78,7 +78,17 @@ const createExpense = async (req, res) => {
         message: "Household not found or you are not a member",
       });
     }
+    const creatorIsAway = await isUserAway({
+      userId: req.user._id,
+      householdId,
+      date: expenseDate,
+    });
 
+    if (creatorIsAway) {
+      return res.status(403).json({
+        message: "You cannot add an expense while you are marked as away",
+      });
+    }
     const paidBy = req.user._id;
 
     let eligibleMembers;
@@ -131,9 +141,10 @@ const createExpense = async (req, res) => {
       excludedMembers = result.excludedMembers;
     }
 
-    if (!eligibleMembers.length) {
+    if (eligibleMembers.length < 2) {
       return res.status(400).json({
-        message: "No eligible participants for this expense",
+        message:
+          "At least two available household members are required to create an expense",
       });
     }
 
@@ -229,6 +240,11 @@ const createExpense = async (req, res) => {
 
           category: populatedExpense.category,
         },
+      });
+      await sendNewExpenseEmail({
+        recipient: participant.user,
+        expense: populatedExpense,
+        share: participant.share,
       });
     }
 
@@ -646,7 +662,19 @@ const updateExpense = async (req, res) => {
       .populate("paidBy", "name email")
       .populate("createdBy", "name email")
       .populate("participants.user", "name email");
+    for (const participant of updatedExpense.participants) {
+      const participantUserId = participant.user._id.toString();
 
+      if (participantUserId === req.user._id.toString()) {
+        continue;
+      }
+
+      await sendExpenseUpdatedEmail({
+        recipient: participant.user,
+        expense: updatedExpense,
+        share: participant.share,
+      });
+    }
     res.status(200).json({
       message: "Expense updated successfully",
       expense: updatedExpense,
