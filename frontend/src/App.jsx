@@ -40,7 +40,7 @@ function App() {
           {/* Expenses */}
           <Route path="/expenses" element={<RecentExpenses />} />
 
-          <Route path="/expenses/create" element={<CreateExpense />} />
+          <Route path="/expenses/new" element={<CreateExpense />} />
 
           <Route path="/expenses/:expenseId" element={<ExpenseDetails />} />
 
