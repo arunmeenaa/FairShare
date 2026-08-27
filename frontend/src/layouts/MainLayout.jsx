@@ -6,7 +6,7 @@ const MainLayout = () => {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="pt-16">
+      <main className="">
         <Outlet />
       </main>
     </div>

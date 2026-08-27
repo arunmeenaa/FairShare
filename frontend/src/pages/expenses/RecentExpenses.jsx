@@ -1,0 +1,604 @@
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import api from "../../services/api";
+import { useHousehold } from "../../context/HouseholdContext";
+import { useAuth } from "../../context/AuthContext";
+
+// ==========================================
+// UTILITIES & HELPERS
+// ==========================================
+
+const formatCurrency = (value) => {
+  return `₹${Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatCategory = (category) => {
+  return String(category || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const getId = (target) => {
+  if (!target) return "";
+  if (typeof target === "object") {
+    return (
+      target._id ||
+      target.id ||
+      target.user?._id ||
+      target.user ||
+      ""
+    ).toString();
+  }
+  return target.toString();
+};
+
+const resolveMemberName = (target, memberRoster = []) => {
+  if (!target) return "Unknown";
+
+  if (typeof target === "object" && target.name) {
+    return target.name;
+  }
+  if (typeof target === "object" && target.user?.name) {
+    return target.user.name;
+  }
+
+  const targetId = getId(target);
+
+  if (Array.isArray(memberRoster)) {
+    const matched = memberRoster.find((m) => {
+      const mUserId = getId(m.user);
+      const mId = getId(m);
+      return mUserId === targetId || mId === targetId;
+    });
+
+    if (matched?.user?.name) return matched.user.name;
+    if (matched?.name) return matched.name;
+  }
+
+  if (typeof target === "string" && target.length === 24) {
+    return "Member";
+  }
+
+  return typeof target === "string" ? target : "Member";
+};
+
+const CATEGORY_ICONS = {
+  grocery: "🛒",
+  electricity: "⚡",
+  internet: "🌐",
+  rent: "🏠",
+  dining: "🍽️",
+  maintenance: "🔧",
+  water: "💧",
+  cleaning: "🧹",
+  household: "🛋️",
+  other: "💳",
+};
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const RecentExpenses = () => {
+  const { currentHousehold } = useHousehold();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [expenses, setExpenses] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState("");
+
+  const now = new Date();
+  const [receiptMonth, setReceiptMonth] = useState(now.getMonth() + 1);
+  const [receiptYear, setReceiptYear] = useState(now.getFullYear());
+
+  const currentUserId = getId(user);
+
+  const fetchData = useCallback(async () => {
+    if (!currentHousehold?._id) return;
+
+    try {
+      setFetching(true);
+      setError("");
+
+      const [expenseResponse, memberResponse] = await Promise.all([
+        api.get(`/expenses/${currentHousehold._id}`),
+        api.get(`/households/${currentHousehold._id}/members`),
+      ]);
+
+      setExpenses(expenseResponse.data.expenses || []);
+      setMembers(memberResponse.data.members || []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load expenses");
+    } finally {
+      setFetching(false);
+    }
+  }, [currentHousehold?._id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const triggerBlobDownload = (blobData, filename) => {
+    const blob = new Blob([blobData], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadReceipt = async (expenseId) => {
+    try {
+      if (!currentHousehold?._id || !expenseId) {
+        toast.error("Expense information is missing");
+        return;
+      }
+
+      const response = await api.get(
+        `/reports/${currentHousehold._id}/${expenseId}/receipt`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      triggerBlobDownload(
+        response.data,
+        `FairShare-Expense-Receipt-${expenseId}.pdf`,
+      );
+
+      toast.success("Expense receipt downloaded");
+    } catch (err) {
+      console.error("Failed to download expense receipt:", err);
+
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          toast.error(
+            errorData.message || "Failed to download expense receipt",
+          );
+        } catch {
+          toast.error("Failed to download expense receipt");
+        }
+      } else {
+        toast.error(
+          err.response?.data?.message || "Failed to download expense receipt",
+        );
+      }
+    }
+  };
+
+  const downloadMonthlyReceipt = async (type) => {
+    try {
+      if (!currentHousehold?._id) {
+        toast.error("Please select a household first");
+        return;
+      }
+
+      const endpoint =
+        type === "personal"
+          ? `/reports/${currentHousehold._id}/monthly-receipt`
+          : `/reports/${currentHousehold._id}/household-receipt`;
+
+      const response = await api.get(endpoint, {
+        params: {
+          month: receiptMonth,
+          year: receiptYear,
+        },
+        responseType: "blob",
+      });
+
+      const formattedMonth = String(receiptMonth).padStart(2, "0");
+      const filename =
+        type === "personal"
+          ? `FairShare-My-Receipt-${receiptYear}-${formattedMonth}.pdf`
+          : `FairShare-Household-Receipt-${receiptYear}-${formattedMonth}.pdf`;
+
+      triggerBlobDownload(response.data, filename);
+
+      toast.success(
+        type === "personal"
+          ? "Your monthly receipt downloaded"
+          : "Household statement downloaded",
+      );
+    } catch (err) {
+      console.error("Failed to download monthly statement:", err);
+      toast.error("Failed to download statement");
+    }
+  };
+
+  if (!currentHousehold) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10">
+        <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+              <svg
+                className="h-8 w-8 text-indigo-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M3 10.5L12 3l9 7.5M5 9v11h14V9M9 20v-6h6v6"
+                />
+              </svg>
+            </div>
+            <h1 className="mt-6 text-2xl font-bold text-slate-900">
+              Select a household
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Select a household before adding or viewing shared expenses.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        {/* ================= HEADER ================= */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-indigo-600">
+            {currentHousehold.name}
+          </p>
+
+          <div className="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+                Expenses
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Manage and track your household transactions.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                to="/expenses/new"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Add Expense
+              </Link>
+
+              {/* Month Picker */}
+              <select
+                value={receiptMonth}
+                onChange={(e) => setReceiptMonth(Number(e.target.value))}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+              >
+                {MONTHS.map((name, index) => (
+                  <option key={index + 1} value={index + 1}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Year Picker */}
+              <select
+                value={receiptYear}
+                onChange={(e) => setReceiptYear(Number(e.target.value))}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+              >
+                {[-2, -1, 0, 1].map((offset) => {
+                  const y = now.getFullYear() + offset;
+                  return (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {/* Personal Receipt */}
+              <button
+                type="button"
+                onClick={() => downloadMonthlyReceipt("personal")}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
+                  />
+                </svg>
+                My Receipt
+              </button>
+
+              {/* Household Statement */}
+              <button
+                type="button"
+                onClick={() => downloadMonthlyReceipt("household")}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
+                  />
+                </svg>
+                Household Statement
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= ERROR BANNER ================= */}
+        {error && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
+              <svg
+                className="h-4 w-4 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v3m0 4h.01M5.07 19h13.86a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16a2 2 0 001.73 3z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-red-800">
+                Something went wrong
+              </p>
+              <p className="mt-0.5 text-sm text-red-600">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* ================= RECENT EXPENSES LIST ================= */}
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Recent expenses
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Your household's recorded activity.
+                </p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                {expenses.length}{" "}
+                {expenses.length === 1 ? "expense" : "expenses"}
+              </span>
+            </div>
+          </div>
+
+          {fetching ? (
+            <div className="divide-y divide-slate-100">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="animate-pulse p-5">
+                  <div className="flex gap-4">
+                    <div className="h-11 w-11 rounded-xl bg-slate-100" />
+                    <div className="flex-1">
+                      <div className="h-4 w-40 rounded bg-slate-100" />
+                      <div className="mt-2 h-3 w-28 rounded bg-slate-100" />
+                    </div>
+                    <div className="h-5 w-20 rounded bg-slate-100" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : expenses.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                <svg
+                  className="h-7 w-7 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM9 7h6M9 11h6M9 15h4"
+                  />
+                </svg>
+              </div>
+              <h3 className="mt-4 font-semibold text-slate-900">
+                No expenses yet
+              </h3>
+              <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-500">
+                Add your first household expense using the creation page.
+              </p>
+              <div className="mt-6">
+                <Link
+                  to="/expenses/new"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                >
+                  Create Expense
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {expenses.map((expense) => {
+                const excluded = expense.excludedMembers || [];
+                const isUserExcluded = excluded.some(
+                  (m) =>
+                    getId(m.user) === currentUserId ||
+                    getId(m) === currentUserId,
+                );
+                const awayMembers = excluded
+                  .filter((m) => m.status === "away" || m.reason)
+                  .map((m) => resolveMemberName(m.user || m, members));
+
+                const icon =
+                  CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
+                const payerName = resolveMemberName(expense.paidBy, members);
+
+                return (
+                  <div
+                    key={expense._id}
+                    className="flex w-full items-center gap-3 p-5 transition hover:bg-slate-50"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/expenses/${expense._id}`)}
+                      className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+                        {icon}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate font-semibold text-slate-900">
+                            {expense.description}
+                          </h3>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                            {formatCategory(expense.category)}
+                          </span>
+                        </div>
+
+                        <p className="mt-0.5 text-sm text-slate-500">
+                          Paid by{" "}
+                          <span className="font-medium text-slate-700">
+                            {payerName}
+                          </span>
+                          {" • "}
+                          {formatDate(expense.date)}
+                          {" • "}
+                          <span>
+                            {expense.participantMode === "manual"
+                              ? "Manual split"
+                              : "Automatic split"}
+                          </span>
+                        </p>
+
+                        {/* Away / Not Included Member Indicators */}
+                        {isUserExcluded ? (
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            <span>●</span>
+                            You were away
+                          </div>
+                        ) : awayMembers.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-slate-400">
+                              Away:
+                            </span>
+                            {awayMembers.map((name, idx) => (
+                              <span
+                                key={`${name}-${idx}`}
+                                className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p className="font-bold text-slate-900">
+                          {formatCurrency(expense.amount)}
+                        </p>
+                        {expense.participantMode === "manual" && (
+                          <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600">
+                            Manual
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Download Specific Receipt Button */}
+                    <button
+                      type="button"
+                      onClick={() => downloadReceipt(expense._id)}
+                      className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                      title="Download receipt"
+                      aria-label={`Download receipt for ${expense.description}`}
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.8}
+                          d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+};
+
+export default RecentExpenses;

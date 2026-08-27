@@ -4,10 +4,6 @@ import api from "../../services/api";
 import { useHousehold } from "../../context/HouseholdContext";
 import { useAuth } from "../../context/AuthContext";
 
-// ==========================================
-// UTILITIES & HELPERS
-// ==========================================
-
 const formatCurrency = (value) => {
   return `₹${Number(value || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
@@ -33,7 +29,13 @@ const formatDate = (date) => {
 const getId = (target) => {
   if (!target) return "";
   if (typeof target === "object") {
-    return (target._id || target.id || target.user?._id || target.user || "").toString();
+    return (
+      target._id ||
+      target.id ||
+      target.user?._id ||
+      target.user ||
+      ""
+    ).toString();
   }
   return target.toString();
 };
@@ -48,20 +50,28 @@ const CATEGORY_ICONS = {
   utilities: "💡",
 };
 
-// ==========================================
-// REUSABLE SUB-COMPONENTS
-// ==========================================
-
-const StatCard = ({ title, value, subtitle, icon, iconBg, iconColor, textColor }) => (
+const StatCard = ({
+  title,
+  value,
+  subtitle,
+  icon,
+  iconBg,
+  iconColor,
+  textColor,
+}) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg}`}>
+    <div
+      className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconBg}`}
+    >
       <span className={iconColor}>{icon}</span>
     </div>
     <p className="mt-5 text-sm text-slate-500">{title}</p>
     <p className={`mt-1 text-2xl font-bold ${textColor || "text-slate-900"}`}>
       {value}
     </p>
-    {subtitle && <p className="mt-1 text-xs font-medium text-slate-400">{subtitle}</p>}
+    {subtitle && (
+      <p className="mt-1 text-xs font-medium text-slate-400">{subtitle}</p>
+    )}
   </div>
 );
 
@@ -73,7 +83,9 @@ const ContributionBar = ({ label, amount, total, colorClass }) => {
   return (
     <div className="rounded-2xl bg-slate-50 p-5">
       <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-xl font-bold text-slate-900">{formatCurrency(amount)}</p>
+      <p className="mt-2 text-xl font-bold text-slate-900">
+        {formatCurrency(amount)}
+      </p>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
         <div
           className={`h-full rounded-full transition-all duration-300 ${colorClass}`}
@@ -83,10 +95,6 @@ const ContributionBar = ({ label, amount, total, colorClass }) => {
     </div>
   );
 };
-
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
 
 const Dashboard = () => {
   const { currentHousehold, loading: householdLoading } = useHousehold();
@@ -196,9 +204,12 @@ const Dashboard = () => {
                 />
               </svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold text-slate-900">Welcome to FairShare</h1>
+            <h1 className="mt-6 text-2xl font-bold text-slate-900">
+              Welcome to FairShare
+            </h1>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-              You haven't selected a household yet. Select or join a household to start tracking your shared expenses.
+              You haven't selected a household yet. Select or join a household
+              to start tracking your shared expenses.
             </p>
           </div>
         </div>
@@ -209,33 +220,39 @@ const Dashboard = () => {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-
         {/* ================= HEADER ================= */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-indigo-600">Overview</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+              Dashboard
+            </h1>
             <p className="mt-1 text-sm text-slate-500">
               Here's how your household is doing this month.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-            <svg
-              className="h-4 w-4 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M8 2v4m8-4v4M4 9h16M5 4h14a1 1 0 011 1v15a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"
-              />
-            </svg>
+          <div className="flex items-center gap-2 rounded-xl  px-4 py-2.5 ">
             <span className="text-sm font-medium text-slate-700">
-              {getMonthName(report?.month)} {report?.year}
+              <Link
+                to="/expenses/new"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Add Expense
+              </Link>
             </span>
           </div>
         </div>
@@ -248,7 +265,12 @@ const Dashboard = () => {
             iconBg="bg-indigo-50"
             iconColor="text-indigo-600"
             icon={
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -265,7 +287,12 @@ const Dashboard = () => {
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
             icon={
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -282,7 +309,12 @@ const Dashboard = () => {
             iconBg="bg-violet-50"
             iconColor="text-violet-600"
             icon={
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <circle cx="12" cy="12" r="8" strokeWidth={1.8} />
                 <path
                   strokeLinecap="round"
@@ -301,14 +333,37 @@ const Dashboard = () => {
               balancePositive
                 ? "You should receive"
                 : balanceNegative
-                ? "You need to pay"
-                : "You're settled"
+                  ? "You need to pay"
+                  : "You're settled"
             }
-            iconBg={balancePositive ? "bg-emerald-50" : balanceNegative ? "bg-red-50" : "bg-slate-100"}
-            iconColor={balancePositive ? "text-emerald-600" : balanceNegative ? "text-red-600" : "text-slate-500"}
-            textColor={balancePositive ? "text-emerald-600" : balanceNegative ? "text-red-600" : "text-slate-900"}
+            iconBg={
+              balancePositive
+                ? "bg-emerald-50"
+                : balanceNegative
+                  ? "bg-red-50"
+                  : "bg-slate-100"
+            }
+            iconColor={
+              balancePositive
+                ? "text-emerald-600"
+                : balanceNegative
+                  ? "text-red-600"
+                  : "text-slate-500"
+            }
+            textColor={
+              balancePositive
+                ? "text-emerald-600"
+                : balanceNegative
+                  ? "text-red-600"
+                  : "text-slate-900"
+            }
             icon={
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -325,7 +380,9 @@ const Dashboard = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Spending overview</h2>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Spending overview
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   Your household activity for {getMonthName(report?.month)}.
                 </p>
@@ -340,7 +397,9 @@ const Dashboard = () => {
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
                   Household spending
                 </span>
-                <span className="text-xs font-semibold text-slate-500">100%</span>
+                <span className="text-xs font-semibold text-slate-500">
+                  100%
+                </span>
               </div>
               <div className="h-4 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full w-full rounded-full bg-indigo-500" />
@@ -367,7 +426,9 @@ const Dashboard = () => {
           <div className="relative overflow-hidden rounded-2xl bg-indigo-600 p-6 shadow-sm">
             <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-indigo-500/60" />
             <div className="relative">
-              <p className="text-sm font-medium text-indigo-200">Your settlement position</p>
+              <p className="text-sm font-medium text-indigo-200">
+                Your settlement position
+              </p>
               <h2 className="mt-3 text-3xl font-bold text-white">
                 {balancePositive ? "+" : balanceNegative ? "-" : ""}
                 {formatCurrency(Math.abs(balance))}
@@ -376,8 +437,8 @@ const Dashboard = () => {
                 {balancePositive
                   ? "You have contributed more than your share and should receive this amount."
                   : balanceNegative
-                  ? "Your share is higher than what you have paid."
-                  : "Your payments and share are completely balanced."}
+                    ? "Your share is higher than what you have paid."
+                    : "Your payments and share are completely balanced."}
               </p>
 
               <div className="mt-8 rounded-xl bg-white/10 p-4 ring-1 ring-white/10">
@@ -403,7 +464,9 @@ const Dashboard = () => {
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Recent expenses</h2>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Recent expenses
+              </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Latest household expenses this month.
               </p>
@@ -421,13 +484,14 @@ const Dashboard = () => {
               {report.recentExpenses.map((expense) => {
                 const excluded = expense.excludedMembers || [];
                 const isUserExcluded = excluded.some(
-                  (m) => getId(m.user) === currentUserId
+                  (m) => getId(m.user) === currentUserId,
                 );
                 const awayMembers = excluded
                   .filter((m) => m.status === "away" || m.reason)
                   .map((m) => m.user?.name || "Member");
 
-                const icon = CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
+                const icon =
+                  CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
 
                 return (
                   <Link
@@ -462,7 +526,9 @@ const Dashboard = () => {
                             </div>
                           ) : awayMembers.length > 0 ? (
                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                              <span className="text-xs text-slate-400">Away:</span>
+                              <span className="text-xs text-slate-400">
+                                Away:
+                              </span>
                               {awayMembers.map((name, idx) => (
                                 <span
                                   key={`${name}-${idx}`}
@@ -508,7 +574,9 @@ const Dashboard = () => {
         {sortedCategories.length > 0 && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-slate-900">Spending by category</h2>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Spending by category
+              </h2>
               <p className="mt-1 text-sm text-slate-500">
                 See where your household is spending the most.
               </p>
@@ -530,7 +598,9 @@ const Dashboard = () => {
                     className="rounded-2xl border border-slate-100 bg-slate-50 p-4"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">{label}</span>
+                      <span className="text-sm font-medium text-slate-700">
+                        {label}
+                      </span>
                       <span className="text-xs font-semibold text-slate-400">
                         {percentage}%
                       </span>
@@ -573,14 +643,16 @@ const Dashboard = () => {
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-indigo-900">FairShare overview</p>
+              <p className="text-sm font-semibold text-indigo-900">
+                FairShare overview
+              </p>
               <p className="mt-1 text-sm leading-6 text-indigo-700">
-                Your dashboard shows your household's spending, contribution, and recent activity for the current month.
+                Your dashboard shows your household's spending, contribution,
+                and recent activity for the current month.
               </p>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

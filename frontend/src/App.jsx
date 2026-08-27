@@ -1,15 +1,19 @@
 import { Routes, Route } from "react-router-dom";
+
 import MainLayout from "./layouts/MainLayout";
 
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
 import Dashboard from "./pages/dashboard/Dashboard";
-import Expenses from "./pages/expenses/Expenses";
+
+import RecentExpenses from "./pages/expenses/RecentExpenses";
+import CreateExpense from "./pages/expenses/CreateExpense";
+import ExpenseDetails from "./pages/expenses/ExpenseDetail";
+
 import Settlement from "./pages/settlement/Settlement";
 import Members from "./pages/members/Members";
 import Availability from "./components/Availability";
-import ExpenseDetails from "./pages/expenses/ExpenseDetail";
 import Profile from "./pages/profile/Profile";
 
 import PublicRoute from "./components/PublicRoute";
@@ -18,7 +22,7 @@ import PrivateRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
-      {/* Public */}
+      {/* ================= PUBLIC ================= */}
 
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<Login />} />
@@ -26,15 +30,25 @@ function App() {
         <Route path="/register" element={<Register />} />
       </Route>
 
-      {/* Protected */}
+      {/* ================= PROTECTED ================= */}
 
       <Route element={<PrivateRoute />}>
         <Route element={<MainLayout />}>
+          {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
 
-          <Route path="/expenses" element={<Expenses />} />
+          {/* ================= EXPENSES ================= */}
 
+          {/* Recent expenses */}
+          <Route path="/expenses" element={<RecentExpenses />} />
+
+          {/* Create new expense */}
+          <Route path="/expenses/new" element={<CreateExpense />} />
+
+          {/* Individual expense */}
           <Route path="/expenses/:expenseId" element={<ExpenseDetails />} />
+
+          {/* ================= OTHER ================= */}
 
           <Route path="/settlement" element={<Settlement />} />
 
@@ -46,7 +60,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* Unknown URL */}
+      {/* ================= UNKNOWN URL ================= */}
 
       <Route path="*" element={<Dashboard />} />
     </Routes>

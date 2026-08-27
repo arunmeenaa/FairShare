@@ -47,6 +47,19 @@ const createExpense = async (req, res) => {
         });
       }
 
+      if (participantMode === "manual") {
+        const creatorId = req.user._id.toString();
+        const participantIds = participants.map((p) =>
+          (p.user || p).toString(),
+        );
+
+        if (!participantIds.includes(creatorId)) {
+          return res.status(400).json({
+            message:
+              "You must be included as a participant in manual expense splits.",
+          });
+        }
+      }
       if (!participantReason || !participantReason.trim()) {
         return res.status(400).json({
           message: "A reason is required for manual splitting",
