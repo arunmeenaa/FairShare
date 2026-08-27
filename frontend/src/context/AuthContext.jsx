@@ -72,6 +72,13 @@ export const AuthProvider = ({ children }) => {
     };
   }, [user, loading]);
 
+  const updateUser = (updatedUser) => {
+    setUser((prev) => ({
+      ...prev,
+      ...updatedUser,
+    }));
+  };
+
   const logout = async () => {
     try {
       await api.post("/auth/logout");
@@ -98,6 +105,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         getCurrentUser,
+        updateUser,
       }}
     >
       {children}

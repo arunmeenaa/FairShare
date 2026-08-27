@@ -1,15 +1,20 @@
 const bcrypt = require("bcrypt");
 const User = require("../model/user.model");
+const Household = require("../model/household.model");
+
 require("dotenv").config();
+
 const generateToken = require("../utils/generateToken");
+const generateInviteCode = require("../utils/generateInviteCode");
 
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, householdMode, householdName, inviteCode } =
+      req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
-        message: "All fields are required",
+        message: "Name, email and password are required",
       });
     }
 
@@ -25,6 +30,39 @@ const register = async (req, res) => {
       return res.status(400).json({
         message: "Password must be at least 6 characters long",
       });
+    }
+
+    if (householdMode && !["create", "join"].includes(householdMode)) {
+      return res.status(400).json({
+        message: "Invalid household mode",
+      });
+    }
+
+    // If creating a household
+    if (householdMode === "create") {
+      if (!householdName || !householdName.trim()) {
+        return res.status(400).json({
+          message: "Household name is required",
+        });
+      }
+    }
+
+    if (householdMode === "join") {
+      if (!inviteCode || !inviteCode.trim()) {
+        return res.status(400).json({
+          message: "Invite code is required",
+        });
+      }
+
+      const household = await Household.findOne({
+        inviteCode: inviteCode.trim().toUpperCase(),
+      });
+
+      if (!household) {
+        return res.status(404).json({
+          message: "Invalid invite code",
+        });
+      }
     }
 
     const existingUser = await User.findOne({
@@ -48,16 +86,85 @@ const register = async (req, res) => {
       password: hashedPassword,
     });
 
-    res.status(201).json({
-      message: "User registered successfully",
+    let household = null;
+
+    if (householdMode === "create") {
+      let newInviteCode;
+      let existingHousehold;
+
+      do {
+        newInviteCode = generateInviteCode();
+
+        existingHousehold = await Household.findOne({
+          inviteCode: newInviteCode,
+        });
+      } while (existingHousehold);
+
+      household = await Household.create({
+        name: householdName.trim(),
+        createdBy: user._id,
+        inviteCode: newInviteCode,
+        members: [
+          {
+            user: user._id,
+            role: "admin",
+          },
+        ],
+      });
+    }
+
+    if (householdMode === "join") {
+      household = await Household.findOne({
+        inviteCode: inviteCode.trim().toUpperCase(),
+      });
+
+      if (!household) {
+        await User.findByIdAndDelete(user._id);
+
+        return res.status(404).json({
+          message: "Invalid invite code",
+        });
+      }
+
+      household.members.push({
+        user: user._id,
+        role: "member",
+      });
+
+      await household.save();
+    }
+
+    const token = generateToken(user._id);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(201).json({
+      message: "Registration successful",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
       },
+      household: household
+        ? {
+            id: household._id,
+            name: household.name,
+            inviteCode: household.inviteCode,
+            role: household.members.find(
+              (member) => member.user.toString() === user._id.toString(),
+            )?.role,
+          }
+        : null,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Registration error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -92,6 +199,7 @@ const login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+
     const token = generateToken(user._id);
 
     res.cookie("token", token, {
@@ -100,7 +208,8 @@ const login = async (req, res) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    res.status(200).json({
+
+    return res.status(200).json({
       message: "Login successful",
       user: {
         id: user._id,
@@ -109,7 +218,7 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -156,11 +265,11 @@ const changePassword = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Password updated successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -174,11 +283,11 @@ const logout = async (req, res) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Logout successful",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -186,14 +295,20 @@ const logout = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    res.status(200).json({
+    return res.status(200).json({
       user: req.user,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
 };
 
-module.exports = { register, login, changePassword, logout, getMe };
+module.exports = {
+  register,
+  login,
+  changePassword,
+  logout,
+  getMe,
+};

@@ -64,6 +64,23 @@ const expenseSchema = new mongoose.Schema(
       },
     ],
 
+    // Members excluded from this expense
+    excludedMembers: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        reason: {
+          type: String,
+          trim: true,
+          default: "Away",
+        },
+      },
+    ],
+
     participantMode: {
       type: String,
       enum: ["automatic", "manual"],
@@ -75,10 +92,12 @@ const expenseSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+
     version: {
       type: Number,
       default: 1,
     },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

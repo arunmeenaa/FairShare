@@ -18,71 +18,37 @@ import PrivateRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
-
       {/* Public */}
 
       <Route element={<PublicRoute />}>
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/register"
-          element={<Register />}
-        />
+        <Route path="/register" element={<Register />} />
       </Route>
 
       {/* Protected */}
 
       <Route element={<PrivateRoute />}>
         <Route element={<MainLayout />}>
+          <Route path="/" element={<Dashboard />} />
 
-          <Route
-            path="/"
-            element={<Dashboard />}
-          />
+          <Route path="/expenses" element={<Expenses />} />
 
-          <Route
-            path="/expenses"
-            element={<Expenses />}
-          />
+          <Route path="/expenses/:expenseId" element={<ExpenseDetails />} />
 
-          <Route
-            path="/expenses/:expenseId"
-            element={<ExpenseDetails />}
-          />
+          <Route path="/settlement" element={<Settlement />} />
 
-          <Route
-            path="/settlement"
-            element={<Settlement />}
-          />
+          <Route path="/members" element={<Members />} />
 
-          <Route
-            path="/members"
-            element={<Members />}
-          />
+          <Route path="/profile" element={<Profile />} />
 
-          <Route
-            path="/profile"
-            element={<Profile />}
-          />
-
-          <Route
-            path="/availability"
-            element={<Availability />}
-          />
-
+          <Route path="/availability" element={<Availability />} />
         </Route>
       </Route>
 
       {/* Unknown URL */}
 
-      <Route
-        path="*"
-        element={<Dashboard />}
-      />
-
+      <Route path="*" element={<Dashboard />} />
     </Routes>
   );
 }

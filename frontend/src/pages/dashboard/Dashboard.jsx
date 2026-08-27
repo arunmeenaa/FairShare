@@ -1,76 +1,71 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
+import { useHousehold } from "../../context/HouseholdContext";
 
 const Dashboard = () => {
+  const { currentHousehold, loading: householdLoading } = useHousehold();
+
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const householdId =
-    localStorage.getItem("householdId");
+  const householdId = currentHousehold?._id;
 
   useEffect(() => {
     const fetchReport = async () => {
+      if (!householdId) return;
+
       try {
+        setLoading(true);
+
         const currentDate = new Date();
 
-        const month =
-          currentDate.getMonth() + 1;
+        const month = currentDate.getMonth() + 1;
+        const year = currentDate.getFullYear();
 
-        const year =
-          currentDate.getFullYear();
-
-        const response = await api.get(
-          `/reports/monthly/${householdId}`,
-          {
-            params: {
-              month,
-              year,
-            },
+        const response = await api.get(`/reports/monthly/${householdId}`, {
+          params: {
+            month,
+            year,
           },
-        );
+        });
 
         setReport(response.data);
       } catch (error) {
-        console.error(
-          "Failed to fetch dashboard:",
-          error,
-        );
+        console.error("Failed to fetch dashboard:", error);
+
+        setReport(null);
       } finally {
         setLoading(false);
       }
     };
+
+    if (householdLoading) {
+      return;
+    }
 
     if (householdId) {
       fetchReport();
     } else {
       setLoading(false);
     }
-  }, [householdId]);
+  }, [householdId, householdLoading]);
 
   const formatCurrency = (value) => {
-    return `₹${Number(value || 0).toLocaleString(
-      "en-IN",
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      },
-    )}`;
+    return `₹${Number(value || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const getMonthName = (month) => {
     if (!month) return "";
 
-    return new Date(
-      2000,
-      month - 1,
-      1,
-    ).toLocaleString("en-IN", {
+    return new Date(2000, month - 1, 1).toLocaleString("en-IN", {
       month: "long",
     });
   };
 
-  const balance =
-    report?.currentUser?.balance || 0;
+  const balance = report?.currentUser?.balance || 0;
 
   const balancePositive = balance > 0;
   const balanceNegative = balance < 0;
@@ -90,10 +85,7 @@ const Dashboard = () => {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="h-36 rounded-2xl bg-white shadow-sm"
-              />
+              <div key={item} className="h-36 rounded-2xl bg-white shadow-sm" />
             ))}
           </div>
 
@@ -132,9 +124,8 @@ const Dashboard = () => {
             </h1>
 
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-              You haven't selected a household yet.
-              Select or join a household to start
-              tracking your shared expenses.
+              You haven't selected a household yet. Select or join a household
+              to start tracking your shared expenses.
             </p>
           </div>
         </div>
@@ -145,21 +136,17 @@ const Dashboard = () => {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
-
         {/* ================= HEADER ================= */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-indigo-600">
-              Overview
-            </p>
+            <p className="text-sm font-medium text-indigo-600">Overview</p>
 
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
               Dashboard
             </h1>
 
             <p className="mt-1 text-sm text-slate-500">
-              Here's how your household is doing this
-              month.
+              Here's how your household is doing this month.
             </p>
           </div>
 
@@ -178,15 +165,13 @@ const Dashboard = () => {
             </svg>
 
             <span className="text-sm font-medium text-slate-700">
-              {getMonthName(report?.month)}{" "}
-              {report?.year}
+              {getMonthName(report?.month)} {report?.year}
             </span>
           </div>
         </div>
 
         {/* ================= STAT CARDS ================= */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
           {/* Total spending */}
           <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div className="flex items-start justify-between">
@@ -210,14 +195,10 @@ const Dashboard = () => {
               </span>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">
-              Total spending
-            </p>
+            <p className="mt-5 text-sm text-slate-500">Total spending</p>
 
             <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              {formatCurrency(
-                report?.totalSpending,
-              )}
+              {formatCurrency(report?.totalSpending)}
             </p>
           </div>
 
@@ -239,14 +220,10 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">
-              You paid
-            </p>
+            <p className="mt-5 text-sm text-slate-500">You paid</p>
 
             <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              {formatCurrency(
-                report?.currentUser?.paid,
-              )}
+              {formatCurrency(report?.currentUser?.paid)}
             </p>
           </div>
 
@@ -259,12 +236,7 @@ const Dashboard = () => {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="8"
-                  strokeWidth={1.8}
-                />
+                <circle cx="12" cy="12" r="8" strokeWidth={1.8} />
 
                 <path
                   strokeLinecap="round"
@@ -274,14 +246,10 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">
-              Your share
-            </p>
+            <p className="mt-5 text-sm text-slate-500">Your share</p>
 
             <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-              {formatCurrency(
-                report?.currentUser?.share,
-              )}
+              {formatCurrency(report?.currentUser?.share)}
             </p>
           </div>
 
@@ -316,9 +284,7 @@ const Dashboard = () => {
               </svg>
             </div>
 
-            <p className="mt-5 text-sm text-slate-500">
-              Your balance
-            </p>
+            <p className="mt-5 text-sm text-slate-500">Your balance</p>
 
             <p
               className={`mt-1 text-2xl font-bold tracking-tight ${
@@ -329,9 +295,7 @@ const Dashboard = () => {
                     : "text-slate-900"
               }`}
             >
-              {formatCurrency(
-                Math.abs(balance),
-              )}
+              {formatCurrency(Math.abs(balance))}
             </p>
 
             <p
@@ -354,7 +318,6 @@ const Dashboard = () => {
 
         {/* ================= MAIN SUMMARY ================= */}
         <div className="grid gap-6 lg:grid-cols-3">
-
           {/* Spending overview */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
             <div className="flex items-start justify-between">
@@ -364,15 +327,12 @@ const Dashboard = () => {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Your household activity for{" "}
-                  {getMonthName(report?.month)}.
+                  Your household activity for {getMonthName(report?.month)}.
                 </p>
               </div>
 
               <div className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600">
-                {formatCurrency(
-                  report?.totalSpending,
-                )}
+                {formatCurrency(report?.totalSpending)}
               </div>
             </div>
 
@@ -396,14 +356,10 @@ const Dashboard = () => {
             {/* Personal comparison */}
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">
-                  Your contribution
-                </p>
+                <p className="text-sm text-slate-500">Your contribution</p>
 
                 <p className="mt-2 text-xl font-bold text-slate-900">
-                  {formatCurrency(
-                    report?.currentUser?.paid,
-                  )}
+                  {formatCurrency(report?.currentUser?.paid)}
                 </p>
 
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -414,8 +370,7 @@ const Dashboard = () => {
                         report?.totalSpending
                           ? Math.min(
                               100,
-                              (report.currentUser
-                                ?.paid /
+                              (report.currentUser?.paid /
                                 report.totalSpending) *
                                 100,
                             )
@@ -427,14 +382,10 @@ const Dashboard = () => {
               </div>
 
               <div className="rounded-2xl bg-slate-50 p-5">
-                <p className="text-sm text-slate-500">
-                  Your share
-                </p>
+                <p className="text-sm text-slate-500">Your share</p>
 
                 <p className="mt-2 text-xl font-bold text-slate-900">
-                  {formatCurrency(
-                    report?.currentUser?.share,
-                  )}
+                  {formatCurrency(report?.currentUser?.share)}
                 </p>
 
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -445,8 +396,7 @@ const Dashboard = () => {
                         report?.totalSpending
                           ? Math.min(
                               100,
-                              (report.currentUser
-                                ?.share /
+                              (report.currentUser?.share /
                                 report.totalSpending) *
                                 100,
                             )
@@ -469,14 +419,8 @@ const Dashboard = () => {
               </p>
 
               <h2 className="mt-3 text-3xl font-bold text-white">
-                {balancePositive
-                  ? "+"
-                  : balanceNegative
-                    ? "-"
-                    : ""}
-                {formatCurrency(
-                  Math.abs(balance),
-                )}
+                {balancePositive ? "+" : balanceNegative ? "-" : ""}
+                {formatCurrency(Math.abs(balance))}
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-indigo-100">
@@ -489,28 +433,20 @@ const Dashboard = () => {
 
               <div className="mt-8 rounded-xl bg-white/10 p-4 ring-1 ring-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-indigo-200">
-                    Paid
-                  </span>
+                  <span className="text-sm text-indigo-200">Paid</span>
 
                   <span className="font-semibold text-white">
-                    {formatCurrency(
-                      report?.currentUser?.paid,
-                    )}
+                    {formatCurrency(report?.currentUser?.paid)}
                   </span>
                 </div>
 
                 <div className="my-3 h-px bg-white/10" />
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-indigo-200">
-                    Share
-                  </span>
+                  <span className="text-sm text-indigo-200">Share</span>
 
                   <span className="font-semibold text-white">
-                    {formatCurrency(
-                      report?.currentUser?.share,
-                    )}
+                    {formatCurrency(report?.currentUser?.share)}
                   </span>
                 </div>
               </div>
@@ -520,8 +456,7 @@ const Dashboard = () => {
 
         {/* ================= CATEGORY SUMMARY ================= */}
         {report?.categoryTotals &&
-          Object.keys(report.categoryTotals).length >
-            0 && (
+          Object.keys(report.categoryTotals).length > 0 && (
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-6">
                 <h2 className="text-lg font-semibold text-slate-900">
@@ -529,33 +464,21 @@ const Dashboard = () => {
                 </h2>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  See where your household is spending
-                  the most.
+                  See where your household is spending the most.
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(
-                  report.categoryTotals,
-                )
-                  .sort(
-                    ([, a], [, b]) => b - a,
-                  )
+                {Object.entries(report.categoryTotals)
+                  .sort(([, a], [, b]) => b - a)
                   .map(([category, amount]) => {
-                    const percentage =
-                      report.totalSpending
-                        ? Math.round(
-                            (amount /
-                              report.totalSpending) *
-                              100,
-                          )
-                        : 0;
+                    const percentage = report.totalSpending
+                      ? Math.round((amount / report.totalSpending) * 100)
+                      : 0;
 
                     const label = category
                       .replace(/_/g, " ")
-                      .replace(/\b\w/g, (char) =>
-                        char.toUpperCase(),
-                      );
+                      .replace(/\b\w/g, (char) => char.toUpperCase());
 
                     return (
                       <div
@@ -615,9 +538,8 @@ const Dashboard = () => {
               </p>
 
               <p className="mt-1 text-sm leading-6 text-indigo-700">
-                Your dashboard shows your household's
-                spending and your contribution for the
-                current month.
+                Your dashboard shows your household's spending and your
+                contribution for the current month.
               </p>
             </div>
           </div>

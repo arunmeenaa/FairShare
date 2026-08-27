@@ -6,7 +6,6 @@ const { generateExpenseReceipt } = require("../services/receipt.service");
 const { getEligibleParticipants } = require("../services/expense.service");
 const { createNotification } = require("../services/notification.service");
 
-
 const createExpense = async (req, res) => {
   try {
     const { householdId } = req.params;
@@ -15,16 +14,15 @@ const createExpense = async (req, res) => {
       description,
       amount,
       category,
-      paidBy,
       date,
       participants: manualParticipants,
       participantMode = "automatic",
       participantReason,
     } = req.body;
 
-    if (!description || !amount || !category || !paidBy || !date) {
+    if (!description || !amount || !category || !date) {
       return res.status(400).json({
-        message: "Description, amount, category, paidBy and date are required",
+        message: "Description, amount, category and date are required",
       });
     }
 
@@ -33,6 +31,7 @@ const createExpense = async (req, res) => {
         message: "Amount must be greater than zero",
       });
     }
+
     if (!["automatic", "manual"].includes(participantMode)) {
       return res.status(400).json({
         message: "Invalid participant mode",
@@ -55,6 +54,7 @@ const createExpense = async (req, res) => {
         });
       }
     }
+
     const expenseDate = new Date(date);
 
     if (isNaN(expenseDate.getTime())) {
@@ -79,16 +79,7 @@ const createExpense = async (req, res) => {
       });
     }
 
-    // Check that paidBy belongs to household
-    const payer = household.members.find(
-      (member) => member.user.toString() === paidBy && member.isActive,
-    );
-
-    if (!payer) {
-      return res.status(400).json({
-        message: "Payer is not an active household member",
-      });
-    }
+    const paidBy = req.user._id;
 
     let eligibleMembers;
     let excludedMembers = [];
@@ -118,7 +109,6 @@ const createExpense = async (req, res) => {
           uniqueParticipants.includes(member.user.toString()),
       );
 
-      // Members not selected in a manual split
       excludedMembers = household.members
         .filter(
           (member) =>
@@ -137,13 +127,16 @@ const createExpense = async (req, res) => {
       });
 
       eligibleMembers = result.participants;
+
       excludedMembers = result.excludedMembers;
     }
+
     if (!eligibleMembers.length) {
       return res.status(400).json({
         message: "No eligible participants for this expense",
       });
     }
+
     const numericAmount = Number(amount);
 
     const share =
@@ -154,6 +147,7 @@ const createExpense = async (req, res) => {
       share,
     }));
 
+    // Fix rounding difference
     const totalShares = participants.reduce(
       (sum, participant) => sum + participant.share,
       0,
@@ -163,6 +157,7 @@ const createExpense = async (req, res) => {
 
     if (difference !== 0) {
       participants[0].share += difference;
+
       participants[0].share = Math.round(participants[0].share * 100) / 100;
     }
 
@@ -171,14 +166,19 @@ const createExpense = async (req, res) => {
       description: description.trim(),
       amount: numericAmount,
       category,
-      paidBy,
+      paidBy: req.user._id,
       date: expenseDate,
+
       participants,
+      excludedMembers,
+
       participantMode,
       participantReason:
         participantMode === "manual" ? participantReason.trim() : null,
+
       createdBy: req.user._id,
     });
+
     await createAuditLog({
       household: householdId,
       entityType: "expense",
@@ -187,52 +187,62 @@ const createExpense = async (req, res) => {
       performedBy: req.user._id,
       after: expense.toObject(),
     });
+
     const populatedExpense = await Expense.findById(expense._id)
       .populate("paidBy", "name email")
       .populate("createdBy", "name email")
-      .populate("participants.user", "name email");
+      .populate("participants.user", "name email")
+      .populate("excludedMembers.user", "name email");
 
-for (const participant of populatedExpense.participants) {
-  const participantUserId =
-    participant.user._id.toString();
+    for (const participant of populatedExpense.participants) {
+      const participantUserId = participant.user._id.toString();
 
-  if (
-    participantUserId ===
-    req.user._id.toString()
-  ) {
-    continue;
-  }
+      if (participantUserId === req.user._id.toString()) {
+        continue;
+      }
 
-  await createNotification({
-    householdId,
-    recipientId: participant.user._id,
-    type: "expense_created",
-    title: "New expense added",
-    message: `${populatedExpense.description} — ₹${populatedExpense.amount.toFixed(
-      2,
-    )}. Your share is ₹${participant.share.toFixed(
-      2,
-    )}, paid by ${
-      populatedExpense.paidBy?.name ||
-      "a household member"
-    }.`,
-    data: {
-      expenseId: populatedExpense._id,
-      amount: populatedExpense.amount,
-      share: participant.share,
-      paidBy: populatedExpense.paidBy._id,
-      category: populatedExpense.category,
-    },
-  });
-}
-      
-    res.status(201).json({
+      await createNotification({
+        householdId,
+
+        recipientId: participant.user._id,
+
+        type: "expense_created",
+
+        title: "New expense added",
+
+        message: `${
+          populatedExpense.description
+        } — ₹${populatedExpense.amount.toFixed(
+          2,
+        )}. Your share is ₹${participant.share.toFixed(2)}, paid by ${
+          populatedExpense.paidBy?.name || "a household member"
+        }.`,
+
+        data: {
+          expenseId: populatedExpense._id,
+
+          amount: populatedExpense.amount,
+
+          share: participant.share,
+
+          paidBy: populatedExpense.paidBy._id,
+
+          category: populatedExpense.category,
+        },
+      });
+    }
+
+    return res.status(201).json({
       message: "Expense added successfully",
+
       expense: populatedExpense,
+
       excludedMembers,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Create expense error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }

@@ -49,7 +49,7 @@ const joinHousehold = async (req, res) => {
   try {
     const { inviteCode } = req.body;
 
-    if (!inviteCode) {
+    if (!inviteCode || !inviteCode.trim()) {
       return res.status(400).json({
         message: "Invite code is required",
       });
@@ -65,30 +65,46 @@ const joinHousehold = async (req, res) => {
       });
     }
 
-    const alreadyMember = household.members.some(
-      (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+    const existingMember = household.members.find(
+      (member) => member.user.toString() === req.user._id.toString(),
     );
 
-    if (alreadyMember) {
-      return res.status(400).json({
-        message: "You are already a member of this household",
+    if (existingMember) {
+      if (existingMember.isActive) {
+        return res.status(400).json({
+          message: "You are already a member of this household",
+        });
+      }
+
+      existingMember.isActive = true;
+      existingMember.role = "member";
+      existingMember.joinedAt = new Date();
+
+      await household.save();
+
+      return res.status(200).json({
+        message: "You rejoined the household successfully",
+        household,
       });
     }
 
     household.members.push({
       user: req.user._id,
       role: "member",
+      groceryParticipant: true,
+      isActive: true,
     });
 
     await household.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Joined household successfully",
       household,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Join household error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -103,11 +119,38 @@ const getMyHouseholds = async (req, res) => {
       .populate("members.user", "name email")
       .populate("createdBy", "name email");
 
-    res.status(200).json({
-      households,
+    const result = households.map((household) => {
+      const householdData =
+        household.toObject();
+
+      const currentMember =
+        household.members.find(
+          (member) =>
+            member.user._id.toString() ===
+              req.user._id.toString() &&
+            member.isActive,
+        );
+
+      const isAdmin =
+        currentMember?.role === "admin";
+
+      if (!isAdmin) {
+        delete householdData.inviteCode;
+      }
+
+      return householdData;
+    });
+
+    return res.status(200).json({
+      households: result,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Get my households error:",
+      error,
+    );
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -131,15 +174,39 @@ const getHousehold = async (req, res) => {
 
     if (!household) {
       return res.status(404).json({
-        message: "Household not found or you are not a member",
+        message:
+          "Household not found or you are not a member",
       });
     }
 
-    res.status(200).json({
-      household,
+    const currentMember = household.members.find(
+      (member) =>
+        member.user._id.toString() ===
+          req.user._id.toString() &&
+        member.isActive,
+    );
+
+    const isAdmin =
+      currentMember?.role === "admin";
+
+    const householdData =
+      household.toObject();
+
+    // Hide invite code from normal members
+    if (!isAdmin) {
+      delete householdData.inviteCode;
+    }
+
+    return res.status(200).json({
+      household: householdData,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error(
+      "Get household error:",
+      error,
+    );
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -223,13 +290,47 @@ const getHouseholdMembers = async (req, res) => {
       });
     }
 
-    const members = household.members.filter((member) => member.isActive);
+    // Find the currently logged-in user's membership
+    const currentMember = household.members.find(
+      (member) =>
+        member.user._id.toString() === req.user._id.toString() &&
+        member.isActive,
+    );
 
-    res.status(200).json({
-      members,
+    const isAdmin = currentMember?.role === "admin";
+
+    // Only active members
+    const activeMembers = household.members.filter((member) => member.isActive);
+
+    // =========================
+    // ADMIN RESPONSE
+    // =========================
+
+    if (isAdmin) {
+      return res.status(200).json({
+        members: activeMembers,
+      });
+    }
+
+    // =========================
+    // NORMAL MEMBER RESPONSE
+    // =========================
+
+    const membersForUser = activeMembers.map((member) => ({
+      _id: member._id,
+      user: member.user,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      isActive: member.isActive,
+    }));
+
+    return res.status(200).json({
+      members: membersForUser,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get household members error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -332,7 +433,63 @@ const removeMember = async (req, res) => {
     });
   }
 };
+const regenerateInviteCode = async (req, res) => {
+  try {
+    const { householdId } = req.params;
 
+    const household = await Household.findOne({
+      _id: householdId,
+      members: {
+        $elemMatch: {
+          user: req.user._id,
+          isActive: true,
+        },
+      },
+    });
+
+    if (!household) {
+      return res.status(404).json({
+        message: "Household not found or you are not a member",
+      });
+    }
+
+    const admin = household.members.find(
+      (member) =>
+        member.user.toString() === req.user._id.toString() && member.isActive,
+    );
+
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({
+        message: "Only household admins can regenerate the invite code",
+      });
+    }
+
+    let inviteCode;
+    let existingHousehold;
+
+    do {
+      inviteCode = generateInviteCode();
+
+      existingHousehold = await Household.findOne({
+        inviteCode,
+        _id: { $ne: householdId },
+      });
+    } while (existingHousehold);
+
+    household.inviteCode = inviteCode;
+
+    await household.save();
+
+    return res.status(200).json({
+      message: "Invite code regenerated successfully",
+      inviteCode: household.inviteCode,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   createHousehold,
   joinHousehold,
@@ -342,4 +499,5 @@ module.exports = {
   getHouseholdMembers,
   leaveHousehold,
   removeMember,
+  regenerateInviteCode,
 };

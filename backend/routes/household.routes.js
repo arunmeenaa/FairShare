@@ -12,6 +12,7 @@ const {
   getHouseholdMembers,
   leaveHousehold,
   removeMember,
+  regenerateInviteCode,
 } = require("../controller/household.controller");
 
 router.post("/", protect, createHousehold);
@@ -26,5 +27,6 @@ router.patch(
 router.get("/:householdId/members", protect, getHouseholdMembers);
 router.post("/:householdId/leave", protect, leaveHousehold);
 router.delete("/:householdId/members/:userId", protect, removeMember);
+router.patch("/:householdId/invite-code", protect, regenerateInviteCode);
 
 module.exports = router;

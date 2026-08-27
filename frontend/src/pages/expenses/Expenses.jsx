@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { useHousehold } from "../../context/HouseholdContext";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Expenses = () => {
   const { currentHousehold } = useHousehold();
@@ -9,12 +10,9 @@ const Expenses = () => {
 
   const [expenses, setExpenses] = useState([]);
   const [members, setMembers] = useState([]);
-  const [selectedParticipants, setSelectedParticipants] =
-    useState([]);
-  const [participantReason, setParticipantReason] =
-    useState("");
-  const [createdExpense, setCreatedExpense] =
-    useState(null);
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [participantReason, setParticipantReason] = useState("");
+  const [createdExpense, setCreatedExpense] = useState(null);
 
   const [form, setForm] = useState({
     description: "",
@@ -36,39 +34,16 @@ const Expenses = () => {
       setFetching(true);
       setError("");
 
-      const [expenseResponse, memberResponse] =
-        await Promise.all([
-          api.get(
-            `/expenses/${currentHousehold._id}`,
-          ),
-          api.get(
-            `/households/${currentHousehold._id}/members`,
-          ),
-        ]);
+      const [expenseResponse, memberResponse] = await Promise.all([
+        api.get(`/expenses/${currentHousehold._id}`),
+        api.get(`/households/${currentHousehold._id}/members`),
+      ]);
 
-      setExpenses(
-        expenseResponse.data.expenses || [],
-      );
+      setExpenses(expenseResponse.data.expenses || []);
 
-      setMembers(
-        memberResponse.data.members || [],
-      );
-
-      if (
-        !form.paidBy &&
-        memberResponse.data.members?.length
-      ) {
-        setForm((prev) => ({
-          ...prev,
-          paidBy:
-            memberResponse.data.members[0].user._id,
-        }));
-      }
+      setMembers(memberResponse.data.members || []);
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Failed to load expenses",
-      );
+      setError(error.response?.data?.message || "Failed to load expenses");
     } finally {
       setFetching(false);
     }
@@ -81,9 +56,7 @@ const Expenses = () => {
   const toggleParticipant = (userId) => {
     setSelectedParticipants((prev) => {
       if (prev.includes(userId)) {
-        return prev.filter(
-          (id) => id !== userId,
-        );
+        return prev.filter((id) => id !== userId);
       }
 
       return [...prev, userId];
@@ -106,19 +79,12 @@ const Expenses = () => {
       form.participantMode === "manual" &&
       selectedParticipants.length === 0
     ) {
-      setError(
-        "Select at least one participant",
-      );
+      setError("Select at least one participant");
       return;
     }
 
-    if (
-      form.participantMode === "manual" &&
-      !participantReason.trim()
-    ) {
-      setError(
-        "Please provide a reason for manual splitting",
-      );
+    if (form.participantMode === "manual" && !participantReason.trim()) {
+      setError("Please provide a reason for manual splitting");
       return;
     }
 
@@ -127,30 +93,20 @@ const Expenses = () => {
       setError("");
       setCreatedExpense(null);
 
-      const response = await api.post(
-        `/expenses/${currentHousehold._id}`,
-        {
-          description: form.description,
-          amount: Number(form.amount),
-          category: form.category,
-          paidBy: form.paidBy,
-          date: form.date,
-          participantMode:
-            form.participantMode,
+      const response = await api.post(`/expenses/${currentHousehold._id}`, {
+        description: form.description,
+        amount: Number(form.amount),
+        category: form.category,
+        date: form.date,
+        participantMode: form.participantMode,
 
-          ...(form.participantMode ===
-            "manual" && {
-            participants:
-              selectedParticipants,
-            participantReason:
-              participantReason.trim(),
-          }),
-        },
-      );
+        ...(form.participantMode === "manual" && {
+          participants: selectedParticipants,
+          participantReason: participantReason.trim(),
+        }),
+      });
 
-      setCreatedExpense(
-        response.data.expense,
-      );
+      setCreatedExpense(response.data.expense);
 
       setForm((prev) => ({
         ...prev,
@@ -162,50 +118,37 @@ const Expenses = () => {
       setParticipantReason("");
 
       await fetchData();
+      toast.success("Expense added successfully");
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Failed to create expense",
-      );
+      toast.error(error.response?.data?.message || "Failed to add expense");
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (value) => {
-    return `₹${Number(value || 0).toLocaleString(
-      "en-IN",
-      {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      },
-    )}`;
+    return `₹${Number(value || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString(
-      "en-IN",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      },
-    );
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   const formatCategory = (category) => {
     return String(category || "")
       .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) =>
-        char.toUpperCase(),
-      );
+      .replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
   const getInitial = (name) => {
-    return (
-      name?.trim()?.charAt(0)?.toUpperCase() ||
-      "?"
-    );
+    return name?.trim()?.charAt(0)?.toUpperCase() || "?";
   };
 
   if (!currentHousehold) {
@@ -234,8 +177,7 @@ const Expenses = () => {
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Select a household before adding or
-              viewing shared expenses.
+              Select a household before adding or viewing shared expenses.
             </p>
           </div>
         </div>
@@ -246,7 +188,6 @@ const Expenses = () => {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-
         {/* ================= HEADER ================= */}
 
         <div className="mb-6">
@@ -261,8 +202,7 @@ const Expenses = () => {
               </h1>
 
               <p className="mt-1 text-sm text-slate-500">
-                Add, manage and track your household
-                expenses.
+                Add, manage and track your household expenses.
               </p>
             </div>
 
@@ -311,9 +251,7 @@ const Expenses = () => {
                 Something went wrong
               </p>
 
-              <p className="mt-0.5 text-sm text-red-600">
-                {error}
-              </p>
+              <p className="mt-0.5 text-sm text-red-600">{error}</p>
             </div>
           </div>
         )}
@@ -321,7 +259,6 @@ const Expenses = () => {
         {/* ================= CONTENT GRID ================= */}
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-
           {/* ================= RECENT EXPENSES ================= */}
 
           <section className="order-2 rounded-3xl border border-slate-200 bg-white shadow-sm lg:order-1">
@@ -339,9 +276,7 @@ const Expenses = () => {
 
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
                   {expenses.length}{" "}
-                  {expenses.length === 1
-                    ? "expense"
-                    : "expenses"}
+                  {expenses.length === 1 ? "expense" : "expenses"}
                 </span>
               </div>
             </div>
@@ -349,10 +284,7 @@ const Expenses = () => {
             {fetching ? (
               <div className="divide-y divide-slate-100">
                 {[1, 2, 3, 4].map((item) => (
-                  <div
-                    key={item}
-                    className="animate-pulse p-5"
-                  >
+                  <div key={item} className="animate-pulse p-5">
                     <div className="flex gap-4">
                       <div className="h-11 w-11 rounded-xl bg-slate-100" />
 
@@ -388,8 +320,7 @@ const Expenses = () => {
                 </h3>
 
                 <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-500">
-                  Add your first household expense
-                  using the form.
+                  Add your first household expense using the form.
                 </p>
               </div>
             ) : (
@@ -398,17 +329,11 @@ const Expenses = () => {
                   <button
                     type="button"
                     key={expense._id}
-                    onClick={() =>
-                      navigate(
-                        `/expenses/${expense._id}`,
-                      )
-                    }
+                    onClick={() => navigate(`/expenses/${expense._id}`)}
                     className="flex w-full items-center gap-4 p-5 text-left transition hover:bg-slate-50"
                   >
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sm font-bold text-indigo-600">
-                      {getInitial(
-                        expense.description,
-                      )}
+                      {getInitial(expense.description)}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -418,30 +343,19 @@ const Expenses = () => {
                         </h3>
 
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                          {formatCategory(
-                            expense.category,
-                          )}
+                          {formatCategory(expense.category)}
                         </span>
                       </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
-                        <span>
-                          Paid by{" "}
-                          {expense.paidBy?.name ||
-                            "Unknown"}
-                        </span>
+                        <span>•</span>
+
+                        <span>{formatDate(expense.date)}</span>
 
                         <span>•</span>
 
                         <span>
-                          {formatDate(expense.date)}
-                        </span>
-
-                        <span>•</span>
-
-                        <span>
-                          {expense.participantMode ===
-                          "manual"
+                          {expense.participantMode === "manual"
                             ? "Manual split"
                             : "Automatic split"}
                         </span>
@@ -450,9 +364,7 @@ const Expenses = () => {
 
                     <div className="shrink-0 text-right">
                       <p className="font-bold text-slate-900">
-                        {formatCurrency(
-                          expense.amount,
-                        )}
+                        {formatCurrency(expense.amount)}
                       </p>
 
                       <svg
@@ -496,9 +408,7 @@ const Expenses = () => {
                 </div>
 
                 <div>
-                  <h2 className="text-lg font-bold text-white">
-                    Add expense
-                  </h2>
+                  <h2 className="text-lg font-bold text-white">Add expense</h2>
 
                   <p className="text-sm text-indigo-200">
                     Record a shared expense
@@ -507,10 +417,7 @@ const Expenses = () => {
               </div>
             </div>
 
-            <form
-              onSubmit={createExpense}
-              className="space-y-5 p-6"
-            >
+            <form onSubmit={createExpense} className="space-y-5 p-6">
               {/* Description */}
 
               <div>
@@ -581,36 +488,16 @@ const Expenses = () => {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
                   >
-                    <option value="grocery">
-                      Grocery
-                    </option>
-                    <option value="electricity">
-                      Electricity
-                    </option>
-                    <option value="internet">
-                      Internet
-                    </option>
-                    <option value="rent">
-                      Rent
-                    </option>
-                    <option value="water">
-                      Water
-                    </option>
-                    <option value="cleaning">
-                      Cleaning
-                    </option>
-                    <option value="maintenance">
-                      Maintenance
-                    </option>
-                    <option value="dining">
-                      Dining
-                    </option>
-                    <option value="household">
-                      Household
-                    </option>
-                    <option value="other">
-                      Other
-                    </option>
+                    <option value="grocery">Grocery</option>
+                    <option value="electricity">Electricity</option>
+                    <option value="internet">Internet</option>
+                    <option value="rent">Rent</option>
+                    <option value="water">Water</option>
+                    <option value="cleaning">Cleaning</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="dining">Dining</option>
+                    <option value="household">Household</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
 
@@ -634,39 +521,6 @@ const Expenses = () => {
                 </div>
               </div>
 
-              {/* Paid by */}
-
-              <div>
-                <label
-                  htmlFor="paidBy"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
-                >
-                  Paid by
-                </label>
-
-                <select
-                  id="paidBy"
-                  name="paidBy"
-                  value={form.paidBy}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                >
-                  <option value="">
-                    Select member
-                  </option>
-
-                  {members.map((member) => (
-                    <option
-                      key={member.user._id}
-                      value={member.user._id}
-                    >
-                      {member.user.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* Split mode */}
 
               <div>
@@ -683,13 +537,11 @@ const Expenses = () => {
                     onClick={() =>
                       setForm((prev) => ({
                         ...prev,
-                        participantMode:
-                          "automatic",
+                        participantMode: "automatic",
                       }))
                     }
                     className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                      form.participantMode ===
-                      "automatic"
+                      form.participantMode === "automatic"
                         ? "bg-white text-indigo-600 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     }`}
@@ -706,8 +558,7 @@ const Expenses = () => {
                       }))
                     }
                     className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                      form.participantMode ===
-                      "manual"
+                      form.participantMode === "manual"
                         ? "bg-white text-indigo-600 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     }`}
@@ -719,8 +570,7 @@ const Expenses = () => {
 
               {/* Manual participants */}
 
-              {form.participantMode ===
-                "manual" && (
+              {form.participantMode === "manual" && (
                 <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
                   <div className="mb-4">
                     <h3 className="text-sm font-bold text-slate-900">
@@ -728,25 +578,17 @@ const Expenses = () => {
                     </h3>
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Choose the members who should
-                      share this expense.
+                      Choose the members who should share this expense.
                     </p>
                   </div>
 
                   <div className="space-y-2">
                     {members
-                      .filter(
-                        (member) =>
-                          member.isActive,
-                      )
+                      .filter((member) => member.isActive)
                       .map((member) => {
-                        const userId =
-                          member.user._id;
+                        const userId = member.user._id;
 
-                        const selected =
-                          selectedParticipants.includes(
-                            userId,
-                          );
+                        const selected = selectedParticipants.includes(userId);
 
                         return (
                           <label
@@ -760,18 +602,12 @@ const Expenses = () => {
                             <input
                               type="checkbox"
                               checked={selected}
-                              onChange={() =>
-                                toggleParticipant(
-                                  userId,
-                                )
-                              }
+                              onChange={() => toggleParticipant(userId)}
                               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
 
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                              {getInitial(
-                                member.user.name,
-                              )}
+                              {getInitial(member.user.name)}
                             </div>
 
                             <span className="text-sm font-medium text-slate-700">
@@ -793,11 +629,7 @@ const Expenses = () => {
                     <textarea
                       id="participantReason"
                       value={participantReason}
-                      onChange={(e) =>
-                        setParticipantReason(
-                          e.target.value,
-                        )
-                      }
+                      onChange={(e) => setParticipantReason(e.target.value)}
                       placeholder="Why are these members selected?"
                       rows={3}
                       className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
@@ -835,7 +667,6 @@ const Expenses = () => {
                         d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
                       />
                     </svg>
-
                     Adding expense...
                   </>
                 ) : (
@@ -852,7 +683,6 @@ const Expenses = () => {
                         d="M12 5v14M5 12h14"
                       />
                     </svg>
-
                     Add expense
                   </>
                 )}
@@ -888,8 +718,7 @@ const Expenses = () => {
                 </h2>
 
                 <p className="mt-0.5 text-sm text-emerald-700">
-                  The expense has been added to your
-                  household.
+                  The expense has been added to your household.
                 </p>
               </div>
             </div>
@@ -904,16 +733,13 @@ const Expenses = () => {
                   <p className="mt-1 text-sm text-slate-500">
                     Paid by{" "}
                     <span className="font-medium text-slate-700">
-                      {createdExpense.paidBy?.name ||
-                        "Unknown"}
+                      {createdExpense.paidBy?.name || "Unknown"}
                     </span>
                   </p>
                 </div>
 
                 <p className="text-2xl font-bold text-slate-900">
-                  {formatCurrency(
-                    createdExpense.amount,
-                  )}
+                  {formatCurrency(createdExpense.amount)}
                 </p>
               </div>
 
@@ -924,80 +750,59 @@ const Expenses = () => {
                   </h3>
 
                   <span className="text-xs font-medium text-slate-400">
-                    {
-                      createdExpense
-                        .participants?.length
-                    }{" "}
-                    members
+                    {createdExpense.participants?.length} members
                   </span>
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
-                  {createdExpense.participants?.map(
-                    (participant) => (
-                      <div
-                        key={
-                          participant.user?._id ||
-                          participant.user
-                        }
-                        className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-0"
-                      >
-                        <span className="text-sm font-medium text-slate-700">
-                          {participant.user?.name ||
-                            "Unknown"}
-                        </span>
+                  {createdExpense.participants?.map((participant) => (
+                    <div
+                      key={participant.user?._id || participant.user}
+                      className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-0"
+                    >
+                      <span className="text-sm font-medium text-slate-700">
+                        {participant.user?.name || "Unknown"}
+                      </span>
 
-                        <span className="font-semibold text-slate-900">
-                          {formatCurrency(
-                            participant.share,
-                          )}
-                        </span>
-                      </div>
-                    ),
-                  )}
+                      <span className="font-semibold text-slate-900">
+                        {formatCurrency(participant.share)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {createdExpense.excludedMembers
-                ?.length > 0 && (
+              {createdExpense.excludedMembers?.length > 0 && (
                 <div className="mt-5">
                   <h3 className="mb-3 text-sm font-bold text-slate-900">
                     Excluded members
                   </h3>
 
                   <div className="space-y-2">
-                    {createdExpense.excludedMembers.map(
-                      (member) => (
-                        <div
-                          key={member.user._id}
-                          className="flex flex-col justify-between gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"
-                        >
-                          <span className="text-sm font-medium text-slate-700">
-                            {member.user.name}
-                          </span>
+                    {createdExpense.excludedMembers.map((member) => (
+                      <div
+                        key={member.user._id}
+                        className="flex flex-col justify-between gap-1 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center"
+                      >
+                        <span className="text-sm font-medium text-slate-700">
+                          {member.user.name}
+                        </span>
 
-                          <span className="text-xs text-slate-500">
-                            ₹0.00 —{" "}
-                            {member.reason}
-                          </span>
-                        </div>
-                      ),
-                    )}
+                        <span className="text-xs text-slate-500">
+                          ₹0.00 — {member.reason}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               <button
                 type="button"
-                onClick={() =>
-                  navigate(
-                    `/expenses/${createdExpense._id}`,
-                  )
-                }
+                onClick={() => navigate(`/expenses/${createdExpense._id}`)}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
               >
                 View expense details
-
                 <svg
                   className="h-4 w-4"
                   fill="none"

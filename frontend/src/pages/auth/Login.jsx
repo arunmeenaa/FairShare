@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import toast from "react-hot-toast";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,21 +26,14 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setError("");
     setLoading(true);
 
     try {
-      await login(
-        formData.email,
-        formData.password,
-      );
-
+      await login(formData.email, formData.password);
+      toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Login failed",
-      );
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -48,7 +42,6 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex min-h-screen">
-
         {/* ================= LEFT BRAND PANEL ================= */}
         <div className="relative hidden overflow-hidden bg-indigo-600 lg:flex lg:w-1/2">
           {/* Decorative shapes */}
@@ -56,7 +49,6 @@ const Login = () => {
           <div className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-indigo-700 opacity-50" />
 
           <div className="relative z-10 flex w-full flex-col justify-between p-12 xl:p-16">
-
             {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
@@ -94,8 +86,8 @@ const Login = () => {
               </h1>
 
               <p className="mt-6 max-w-md text-base leading-7 text-indigo-100">
-                Keep track of shared expenses, know who
-                owes what, and settle everything fairly.
+                Keep track of shared expenses, know who owes what, and settle
+                everything fairly.
               </p>
 
               {/* Features */}
@@ -105,10 +97,7 @@ const Login = () => {
                   "Automatically split costs",
                   "Stay updated with real-time notifications",
                 ].map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-center gap-3"
-                  >
+                  <div key={feature} className="flex items-center gap-3">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15">
                       <svg
                         className="h-3.5 w-3.5 text-white"
@@ -125,9 +114,7 @@ const Login = () => {
                       </svg>
                     </div>
 
-                    <span className="text-sm text-indigo-100">
-                      {feature}
-                    </span>
+                    <span className="text-sm text-indigo-100">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -143,7 +130,6 @@ const Login = () => {
         {/* ================= RIGHT LOGIN PANEL ================= */}
         <div className="flex w-full items-center justify-center px-5 py-10 sm:px-8 lg:w-1/2 lg:px-12 xl:px-20">
           <div className="w-full max-w-md">
-
             {/* Mobile Logo */}
             <div className="mb-8 flex items-center justify-center gap-2 lg:hidden">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600">
@@ -178,8 +164,7 @@ const Login = () => {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Enter your details to access your
-                household dashboard.
+                Enter your details to access your household dashboard.
               </p>
             </div>
 
@@ -200,17 +185,12 @@ const Login = () => {
                   />
                 </svg>
 
-                <p className="text-sm font-medium text-red-700">
-                  {error}
-                </p>
+                <p className="text-sm font-medium text-red-700">{error}</p>
               </div>
             )}
 
             {/* Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-5"
-            >
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div>
                 <label
@@ -295,11 +275,7 @@ const Login = () => {
 
                   <input
                     id="password"
-                    type={
-                      showPassword
-                        ? "text"
-                        : "password"
-                    }
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     autoComplete="current-password"
                     placeholder="Enter your password"
@@ -311,16 +287,10 @@ const Login = () => {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword(
-                        !showPassword,
-                      )
-                    }
+                    onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 transition hover:text-slate-600"
                     aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
+                      showPassword ? "Hide password" : "Show password"
                     }
                   >
                     {showPassword ? (
@@ -349,12 +319,7 @@ const Login = () => {
                           d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7z"
                         />
 
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="2.5"
-                          strokeWidth={1.8}
-                        />
+                        <circle cx="12" cy="12" r="2.5" strokeWidth={1.8} />
                       </svg>
                     )}
                   </button>
@@ -369,9 +334,7 @@ const Login = () => {
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
 
-                  <span className="text-sm text-slate-500">
-                    Remember me
-                  </span>
+                  <span className="text-sm text-slate-500">Remember me</span>
                 </label>
               </div>
 
@@ -403,13 +366,11 @@ const Login = () => {
                         d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
                       />
                     </svg>
-
                     Authenticating...
                   </>
                 ) : (
                   <>
                     Sign in
-
                     <svg
                       className="ml-2 h-4 w-4"
                       fill="none"

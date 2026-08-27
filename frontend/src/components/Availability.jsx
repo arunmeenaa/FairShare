@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import { useHousehold } from "../context/HouseholdContext";
+import toast from "react-hot-toast";
+
 
 const Availability = () => {
   const { currentHousehold } = useHousehold();
@@ -21,14 +23,9 @@ const Availability = () => {
         `/users/availability/${currentHousehold._id}`,
       );
 
-      setStatus(
-        response.data.availability?.status || "available",
-      );
+      setStatus(response.data.availability?.status || "available");
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Failed to load availability",
-      );
+      setError(error.response?.data?.message || "Failed to load availability");
     } finally {
       setLoading(false);
     }
@@ -52,13 +49,16 @@ const Availability = () => {
         },
       );
 
-      setStatus(
-        response.data.availability.status,
+      setStatus(response.data.availability.status);
+
+      toast.success(
+        newStatus === "available"
+          ? "You are now available"
+          : "You are now marked as away",
       );
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Failed to update availability",
+      toast.error(
+        error.response?.data?.message || "Failed to update availability",
       );
     } finally {
       setUpdating(false);
@@ -90,8 +90,7 @@ const Availability = () => {
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Select a household to manage your
-            availability.
+            Select a household to manage your availability.
           </p>
         </div>
       </div>
@@ -132,8 +131,7 @@ const Availability = () => {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Let your household members know whether
-            you're currently available.
+            Let your household members know whether you're currently available.
           </p>
         </div>
 
@@ -142,9 +140,7 @@ const Availability = () => {
           {/* Status section */}
           <div
             className={`p-6 sm:p-8 ${
-              isAvailable
-                ? "bg-emerald-50/70"
-                : "bg-red-50/70"
+              isAvailable ? "bg-emerald-50/70" : "bg-red-50/70"
             }`}
           >
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -152,9 +148,7 @@ const Availability = () => {
                 {/* Status icon */}
                 <div
                   className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${
-                    isAvailable
-                      ? "bg-emerald-100"
-                      : "bg-red-100"
+                    isAvailable ? "bg-emerald-100" : "bg-red-100"
                   }`}
                 >
                   <span
@@ -173,14 +167,10 @@ const Availability = () => {
 
                   <h2
                     className={`mt-1 text-2xl font-bold ${
-                      isAvailable
-                        ? "text-emerald-700"
-                        : "text-red-700"
+                      isAvailable ? "text-emerald-700" : "text-red-700"
                     }`}
                   >
-                    {isAvailable
-                      ? "Available"
-                      : "Away"}
+                    {isAvailable ? "Available" : "Away"}
                   </h2>
                 </div>
               </div>
@@ -193,9 +183,7 @@ const Availability = () => {
                     : "bg-red-100 text-red-700"
                 }`}
               >
-                {isAvailable
-                  ? "Currently available"
-                  : "Currently away"}
+                {isAvailable ? "Currently available" : "Currently away"}
               </span>
             </div>
           </div>
@@ -211,12 +199,7 @@ const Availability = () => {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      strokeWidth="1.8"
-                    />
+                    <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
                     <path
                       strokeLinecap="round"
                       strokeWidth="1.8"
@@ -231,9 +214,8 @@ const Availability = () => {
                   </p>
 
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Your availability can affect who is
-                    included when household expenses are
-                    automatically split.
+                    Your availability can affect who is included when household
+                    expenses are automatically split.
                   </p>
                 </div>
               </div>
@@ -256,9 +238,7 @@ const Availability = () => {
                   />
                 </svg>
 
-                <p className="text-sm font-medium text-red-700">
-                  {error}
-                </p>
+                <p className="text-sm font-medium text-red-700">{error}</p>
               </div>
             )}
 
@@ -266,13 +246,7 @@ const Availability = () => {
             <button
               type="button"
               disabled={updating}
-              onClick={() =>
-                changeStatus(
-                  isAvailable
-                    ? "away"
-                    : "available",
-                )
-              }
+              onClick={() => changeStatus(isAvailable ? "away" : "available")}
               className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
                 isAvailable
                   ? "bg-red-600 hover:bg-red-700 focus:ring-red-100"
@@ -300,7 +274,6 @@ const Availability = () => {
                       d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
                     />
                   </svg>
-
                   Updating...
                 </>
               ) : (
@@ -335,16 +308,13 @@ const Availability = () => {
                     </svg>
                   )}
 
-                  {isAvailable
-                    ? "Mark as Away"
-                    : "Mark as Available"}
+                  {isAvailable ? "Mark as Away" : "Mark as Available"}
                 </>
               )}
             </button>
 
             <p className="mt-3 text-center text-xs text-slate-400">
-              You can change your availability at any
-              time.
+              You can change your availability at any time.
             </p>
           </div>
         </div>
