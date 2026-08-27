@@ -9,7 +9,7 @@ const Availability = () => {
 
   const [status, setStatus] = useState("available");
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const [targetStatus, setTargetStatus] = useState(null); // Tracks which specific button is saving
 
   const householdId = currentHousehold?._id;
 
@@ -35,10 +35,10 @@ const Availability = () => {
   }, [fetchAvailability]);
 
   const changeStatus = async (newStatus) => {
-    if (!householdId || newStatus === status || updating) return;
+    if (!householdId || newStatus === status || targetStatus !== null) return;
 
     try {
-      setUpdating(true);
+      setTargetStatus(newStatus);
       const response = await api.patch(`/users/availability/${householdId}`, {
         status: newStatus,
       });
@@ -54,7 +54,7 @@ const Availability = () => {
         err.response?.data?.message || "Failed to update availability"
       );
     } finally {
-      setUpdating(false);
+      setTargetStatus(null);
     }
   };
 
@@ -157,14 +157,14 @@ const Availability = () => {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div
-                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ${
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 transition-all ${
                     isAvailable
                       ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
                       : "bg-amber-100 text-amber-700 ring-amber-200"
                   }`}
                 >
                   <span
-                    className={`h-4 w-4 rounded-full ${
+                    className={`h-4 w-4 rounded-full transition-all ${
                       isAvailable
                         ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.2)]"
                         : "bg-amber-500 shadow-[0_0_0_5px_rgba(245,158,11,0.2)]"
@@ -214,25 +214,52 @@ const Availability = () => {
               {/* Option: Available */}
               <button
                 type="button"
-                disabled={updating}
+                disabled={targetStatus !== null}
                 onClick={() => changeStatus("available")}
-                className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
+                className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
                   isAvailable
                     ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
                     : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
-                }`}
+                } ${targetStatus !== null ? "cursor-not-allowed opacity-75" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    {targetStatus === "available" ? (
+                      <svg
+                        className="h-5 w-5 animate-spin text-emerald-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </div>
-                  {isAvailable && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+
+                  {targetStatus === "available" ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                      SAVING...
+                    </span>
+                  ) : isAvailable ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
                       ACTIVE
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="mt-4">
@@ -246,25 +273,52 @@ const Availability = () => {
               {/* Option: Away */}
               <button
                 type="button"
-                disabled={updating}
+                disabled={targetStatus !== null}
                 onClick={() => changeStatus("away")}
-                className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
+                className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
                   !isAvailable
                     ? "border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20"
                     : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
-                }`}
+                } ${targetStatus !== null ? "cursor-not-allowed opacity-75" : ""}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.36 6.64a9 9 0 11-12.73 0M12 3v9" />
-                    </svg>
+                    {targetStatus === "away" ? (
+                      <svg
+                        className="h-5 w-5 animate-spin text-amber-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                        />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.36 6.64a9 9 0 11-12.73 0M12 3v9" />
+                      </svg>
+                    )}
                   </div>
-                  {!isAvailable && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+
+                  {targetStatus === "away" ? (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                      SAVING...
+                    </span>
+                  ) : !isAvailable ? (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
                       ACTIVE
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="mt-4">
