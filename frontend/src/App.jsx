@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import MainLayout from "./layouts/MainLayout";
 
@@ -26,7 +26,6 @@ function App() {
 
       <Route element={<PublicRoute />}>
         <Route path="/login" element={<Login />} />
-
         <Route path="/register" element={<Register />} />
       </Route>
 
@@ -36,33 +35,29 @@ function App() {
         <Route element={<MainLayout />}>
           {/* Dashboard */}
           <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* ================= EXPENSES ================= */}
-
-          {/* Recent expenses */}
+          {/* Expenses */}
           <Route path="/expenses" element={<RecentExpenses />} />
 
-          {/* Create new expense */}
-          <Route path="/expenses/new" element={<CreateExpense />} />
+          <Route path="/expenses/create" element={<CreateExpense />} />
 
-          {/* Individual expense */}
           <Route path="/expenses/:expenseId" element={<ExpenseDetails />} />
 
-          {/* ================= OTHER ================= */}
-
+          {/* Other */}
           <Route path="/settlement" element={<Settlement />} />
 
           <Route path="/members" element={<Members />} />
 
-          <Route path="/profile" element={<Profile />} />
-
           <Route path="/availability" element={<Availability />} />
+
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>
 
       {/* ================= UNKNOWN URL ================= */}
 
-      <Route path="*" element={<Dashboard />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
