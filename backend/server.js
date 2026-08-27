@@ -14,6 +14,7 @@ const notificationRoutes = require("./routes/notification.routes");
 const profileRoutes = require("./routes/profile.routes");
 const emailRoutes = require("./routes/email.routes");
 
+
 const { initializeSocket } = require("./config/socket");
 const {
   startWeeklySettlementEmailJob,
@@ -50,6 +51,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/profile", profileRoutes);
+
 
 const port = process.env.PORT || 5000;
 server.listen(port, () => {

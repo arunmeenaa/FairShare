@@ -2,12 +2,11 @@ const Expense = require("../model/expense.model");
 const Household = require("../model/household.model");
 const User = require("../model/user.model");
 const createAuditLog = require("../utils/createAuditLog");
-const { generateExpenseReceipt } = require("../services/receipt.service");
 const { getEligibleParticipants } = require("../services/expense.service");
 const { createNotification } = require("../services/notification.service");
 const { sendNewExpenseEmail } = require("../services/email.service");
 const { isUserAway } = require("../controller/availability.controller");
-
+const Availability = require("../model/availability.model");
 
 const createExpense = async (req, res) => {
   try {
@@ -179,14 +178,11 @@ const createExpense = async (req, res) => {
       category,
       paidBy: req.user._id,
       date: expenseDate,
-
       participants,
       excludedMembers,
-
       participantMode,
       participantReason:
         participantMode === "manual" ? participantReason.trim() : null,
-
       createdBy: req.user._id,
     });
 
@@ -396,7 +392,8 @@ const getExpense = async (req, res) => {
     })
       .populate("paidBy", "name email")
       .populate("createdBy", "name email")
-      .populate("participants.user", "name email");
+      .populate("participants.user", "name email")
+      .populate("excludedMembers.user", "name email");
 
     if (!expense) {
       return res.status(404).json({
@@ -756,53 +753,6 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-const generateReceipt = async (req, res) => {
-  try {
-    const { householdId, expenseId } = req.params;
-
-    const household = await Household.findOne({
-      _id: householdId,
-      members: {
-        $elemMatch: {
-          user: req.user._id,
-          isActive: true,
-        },
-      },
-    });
-
-    if (!household) {
-      return res.status(404).json({
-        message: "Household not found or you are not a member",
-      });
-    }
-
-    const expense = await Expense.findOne({
-      _id: expenseId,
-      household: householdId,
-      isDeleted: false,
-    })
-      .populate("paidBy", "name email")
-      .populate("createdBy", "name email")
-      .populate("participants.user", "name email");
-
-    if (!expense) {
-      return res.status(404).json({
-        message: "Expense not found",
-      });
-    }
-
-    await generateExpenseReceipt(expense, household, res);
-  } catch (error) {
-    console.error(error);
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        message: error.message,
-      });
-    }
-  }
-};
-
 const verifyExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
@@ -855,6 +805,5 @@ module.exports = {
   getExpense,
   updateExpense,
   deleteExpense,
-  generateReceipt,
   verifyExpense,
 };

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../services/api";
 import { useHousehold } from "../context/HouseholdContext";
-import toast from "react-hot-toast";
-
 
 const Availability = () => {
   const { currentHousehold } = useHousehold();
@@ -10,164 +10,175 @@ const Availability = () => {
   const [status, setStatus] = useState("available");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState("");
 
-  const fetchAvailability = async () => {
-    if (!currentHousehold) return;
+  const householdId = currentHousehold?._id;
+
+  const fetchAvailability = useCallback(async () => {
+    if (!householdId) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
-      setError("");
-
-      const response = await api.get(
-        `/users/availability/${currentHousehold._id}`,
-      );
-
+      const response = await api.get(`/users/availability/${householdId}`);
       setStatus(response.data.availability?.status || "available");
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to load availability");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to load availability");
     } finally {
       setLoading(false);
     }
-  };
+  }, [householdId]);
 
   useEffect(() => {
     fetchAvailability();
-  }, [currentHousehold]);
+  }, [fetchAvailability]);
 
   const changeStatus = async (newStatus) => {
-    if (!currentHousehold) return;
+    if (!householdId || newStatus === status || updating) return;
 
     try {
       setUpdating(true);
-      setError("");
-
-      const response = await api.patch(
-        `/users/availability/${currentHousehold._id}`,
-        {
-          status: newStatus,
-        },
-      );
+      const response = await api.patch(`/users/availability/${householdId}`, {
+        status: newStatus,
+      });
 
       setStatus(response.data.availability.status);
-
       toast.success(
         newStatus === "available"
-          ? "You are now available"
-          : "You are now marked as away",
+          ? "You are now marked as available"
+          : "You are now marked as away"
       );
-    } catch (error) {
+    } catch (err) {
       toast.error(
-        error.response?.data?.message || "Failed to update availability",
+        err.response?.data?.message || "Failed to update availability"
       );
     } finally {
       setUpdating(false);
     }
   };
 
-  if (!currentHousehold) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-            <svg
-              className="h-7 w-7 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M3 10h18M5 10v8m14-8v8M4 18h16M6 10V8a6 6 0 0112 0v2"
-              />
-            </svg>
-          </div>
-
-          <h2 className="mt-5 text-lg font-semibold text-slate-900">
-            No household selected
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Select a household to manage your availability.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] bg-slate-50 p-6">
-        <div className="mx-auto max-w-2xl animate-pulse">
-          <div className="h-8 w-40 rounded-lg bg-slate-200" />
-
-          <div className="mt-2 h-4 w-72 rounded bg-slate-200" />
-
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-8">
-            <div className="h-28 rounded-2xl bg-slate-100" />
-
-            <div className="mt-6 h-12 rounded-xl bg-slate-100" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isAvailable = status === "available";
 
+  /* ================= NO HOUSEHOLD ================= */
+  if (!currentHousehold) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 sm:px-6">
+        <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+              <svg
+                className="h-8 w-8 text-indigo-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="mt-6 text-2xl font-bold text-slate-900">
+              No household selected
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+              Select or join a household to configure your split status and away preferences.
+            </p>
+
+            <div className="mt-8 flex justify-center">
+              <Link
+                to="/households"
+                className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                Go to Households
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= LOADING SKELETON ================= */
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl animate-pulse space-y-6">
+          <div className="space-y-2">
+            <div className="h-4 w-32 rounded bg-slate-200" />
+            <div className="h-9 w-48 rounded-lg bg-slate-200" />
+          </div>
+
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
+            <div className="h-28 rounded-2xl bg-slate-100" />
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="h-32 rounded-2xl bg-slate-100" />
+              <div className="h-32 rounded-2xl bg-slate-100" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl">
-        {/* Header */}
-        <div className="mb-6">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-2xl space-y-6">
+
+        {/* ================= HEADER ================= */}
+        <div>
           <p className="text-sm font-medium text-indigo-600">
             {currentHousehold.name}
           </p>
-
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-            Availability
+            Availability status
           </h1>
-
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Let your household members know whether you're currently available.
+          <p className="mt-1 text-sm text-slate-500">
+            Let roommates know if you're home or away to automate fair expense exclusions.
           </p>
         </div>
 
-        {/* Main Card */}
+        {/* ================= STATUS HERO CARD ================= */}
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          {/* Status section */}
+          
+          {/* Status Banner */}
           <div
-            className={`p-6 sm:p-8 ${
-              isAvailable ? "bg-emerald-50/70" : "bg-red-50/70"
+            className={`border-b px-6 py-7 transition-colors sm:px-8 ${
+              isAvailable
+                ? "border-emerald-100 bg-emerald-50/60"
+                : "border-amber-100 bg-amber-50/60"
             }`}
           >
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                {/* Status icon */}
                 <div
-                  className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${
-                    isAvailable ? "bg-emerald-100" : "bg-red-100"
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ${
+                    isAvailable
+                      ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                      : "bg-amber-100 text-amber-700 ring-amber-200"
                   }`}
                 >
                   <span
-                    className={`h-5 w-5 rounded-full ${
+                    className={`h-4 w-4 rounded-full ${
                       isAvailable
-                        ? "bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.15)]"
-                        : "bg-red-500 shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                        ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.2)]"
+                        : "bg-amber-500 shadow-[0_0_0_5px_rgba(245,158,11,0.2)]"
                     }`}
                   />
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-slate-500">
-                    Current status
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Your current status
                   </p>
-
                   <h2
-                    className={`mt-1 text-2xl font-bold ${
-                      isAvailable ? "text-emerald-700" : "text-red-700"
+                    className={`mt-0.5 text-2xl font-bold ${
+                      isAvailable ? "text-emerald-900" : "text-amber-950"
                     }`}
                   >
                     {isAvailable ? "Available" : "Away"}
@@ -175,149 +186,121 @@ const Availability = () => {
                 </div>
               </div>
 
-              {/* Status badge */}
               <span
-                className={`w-fit rounded-full px-3 py-1.5 text-xs font-semibold ${
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                   isAvailable
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-amber-100 text-amber-800"
                 }`}
               >
-                {isAvailable ? "Currently available" : "Currently away"}
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isAvailable ? "bg-emerald-600" : "bg-amber-600"
+                  }`}
+                />
+                {isAvailable ? "Included in splits" : "Excluded from daily splits"}
               </span>
             </div>
           </div>
 
-          {/* Action section */}
+          {/* Status Selection Cards */}
           <div className="p-6 sm:p-8">
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-              <div className="flex gap-3">
-                <div className="mt-0.5 shrink-0">
-                  <svg
-                    className="h-5 w-5 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
-                    <path
-                      strokeLinecap="round"
-                      strokeWidth="1.8"
-                      d="M12 11v5M12 8h.01"
-                    />
-                  </svg>
+            <label className="mb-3 block text-sm font-semibold text-slate-700">
+              Select your status
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              
+              {/* Option: Available */}
+              <button
+                type="button"
+                disabled={updating}
+                onClick={() => changeStatus("available")}
+                className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
+                  isAvailable
+                    ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  {isAvailable && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                      ACTIVE
+                    </span>
+                  )}
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    Why does availability matter?
-                  </p>
-
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Your availability can affect who is included when household
-                    expenses are automatically split.
+                <div className="mt-4">
+                  <h3 className="font-bold text-slate-900">Available</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    You are residing at home and will share all daily household and grocery costs.
                   </p>
                 </div>
+              </button>
+
+              {/* Option: Away */}
+              <button
+                type="button"
+                disabled={updating}
+                onClick={() => changeStatus("away")}
+                className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
+                  !isAvailable
+                    ? "border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.36 6.64a9 9 0 11-12.73 0M12 3v9" />
+                    </svg>
+                  </div>
+                  {!isAvailable && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="font-bold text-slate-900">Away</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                    You are out of town. Automatic expenses will mark you as excluded while away.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Explanation Note */}
+            <div className="mt-6 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+                  <path strokeLinecap="round" strokeWidth={1.8} d="M12 11v5M12 8h.01" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-indigo-950">
+                  How does FairShare use this?
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-indigo-900/80">
+                  When members record new expenses under automatic split mode, FairShare checks your availability at that moment and automatically excludes you if you are marked as away.
+                </p>
               </div>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-                <svg
-                  className="mt-0.5 h-5 w-5 shrink-0 text-red-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v3m0 4h.01M5.07 19h13.86a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16a2 2 0 001.73 3z"
-                  />
-                </svg>
-
-                <p className="text-sm font-medium text-red-700">{error}</p>
-              </div>
-            )}
-
-            {/* Action */}
-            <button
-              type="button"
-              disabled={updating}
-              onClick={() => changeStatus(isAvailable ? "away" : "available")}
-              className={`mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
-                isAvailable
-                  ? "bg-red-600 hover:bg-red-700 focus:ring-red-100"
-                  : "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-100"
-              }`}
-            >
-              {updating ? (
-                <>
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
-                    />
-                  </svg>
-                  Updating...
-                </>
-              ) : (
-                <>
-                  {isAvailable ? (
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M18.36 6.64a9 9 0 11-12.73 0M12 3v9"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  )}
-
-                  {isAvailable ? "Mark as Away" : "Mark as Available"}
-                </>
-              )}
-            </button>
-
-            <p className="mt-3 text-center text-xs text-slate-400">
-              You can change your availability at any time.
-            </p>
           </div>
         </div>
+
+        <p className="text-center text-xs text-slate-400">
+          Status updates take effect instantly across all upcoming household expense splits.
+        </p>
+
       </div>
     </div>
   );

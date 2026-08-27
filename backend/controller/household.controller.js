@@ -1,5 +1,6 @@
 const Household = require("../model/household.model");
 const generateInviteCode = require("../utils/generateInviteCode");
+const Availability = require("../model/availability.model");
 
 const createHousehold = async (req, res) => {
   try {
@@ -120,19 +121,15 @@ const getMyHouseholds = async (req, res) => {
       .populate("createdBy", "name email");
 
     const result = households.map((household) => {
-      const householdData =
-        household.toObject();
+      const householdData = household.toObject();
 
-      const currentMember =
-        household.members.find(
-          (member) =>
-            member.user._id.toString() ===
-              req.user._id.toString() &&
-            member.isActive,
-        );
+      const currentMember = household.members.find(
+        (member) =>
+          member.user._id.toString() === req.user._id.toString() &&
+          member.isActive,
+      );
 
-      const isAdmin =
-        currentMember?.role === "admin";
+      const isAdmin = currentMember?.role === "admin";
 
       if (!isAdmin) {
         delete householdData.inviteCode;
@@ -145,10 +142,7 @@ const getMyHouseholds = async (req, res) => {
       households: result,
     });
   } catch (error) {
-    console.error(
-      "Get my households error:",
-      error,
-    );
+    console.error("Get my households error:", error);
 
     return res.status(500).json({
       message: error.message,
@@ -174,23 +168,19 @@ const getHousehold = async (req, res) => {
 
     if (!household) {
       return res.status(404).json({
-        message:
-          "Household not found or you are not a member",
+        message: "Household not found or you are not a member",
       });
     }
 
     const currentMember = household.members.find(
       (member) =>
-        member.user._id.toString() ===
-          req.user._id.toString() &&
+        member.user._id.toString() === req.user._id.toString() &&
         member.isActive,
     );
 
-    const isAdmin =
-      currentMember?.role === "admin";
+    const isAdmin = currentMember?.role === "admin";
 
-    const householdData =
-      household.toObject();
+    const householdData = household.toObject();
 
     // Hide invite code from normal members
     if (!isAdmin) {
@@ -201,10 +191,7 @@ const getHousehold = async (req, res) => {
       household: householdData,
     });
   } catch (error) {
-    console.error(
-      "Get household error:",
-      error,
-    );
+    console.error("Get household error:", error);
 
     return res.status(500).json({
       message: error.message,
@@ -290,7 +277,6 @@ const getHouseholdMembers = async (req, res) => {
       });
     }
 
-    // Find the currently logged-in user's membership
     const currentMember = household.members.find(
       (member) =>
         member.user._id.toString() === req.user._id.toString() &&
@@ -299,33 +285,42 @@ const getHouseholdMembers = async (req, res) => {
 
     const isAdmin = currentMember?.role === "admin";
 
-    // Only active members
     const activeMembers = household.members.filter((member) => member.isActive);
 
-    // =========================
-    // ADMIN RESPONSE
-    // =========================
+    // Get availability for all active members
+    const availabilityRecords = await Availability.find({
+      household: householdId,
+      user: {
+        $in: activeMembers.map((member) => member.user._id),
+      },
+    });
 
-    if (isAdmin) {
-      return res.status(200).json({
-        members: activeMembers,
-      });
-    }
+    const availabilityMap = new Map(
+      availabilityRecords.map((record) => [
+        record.user.toString(),
+        record.status,
+      ]),
+    );
 
-    // =========================
-    // NORMAL MEMBER RESPONSE
-    // =========================
-
-    const membersForUser = activeMembers.map((member) => ({
+    // Add REAL availability status
+    const membersWithAvailability = activeMembers.map((member) => ({
       _id: member._id,
       user: member.user,
       role: member.role,
       joinedAt: member.joinedAt,
       isActive: member.isActive,
+
+      availabilityStatus:
+        availabilityMap.get(member.user._id.toString()) || null,
+
+      // Only admins receive this field
+      ...(isAdmin && {
+        groceryParticipant: member.groceryParticipant,
+      }),
     }));
 
     return res.status(200).json({
-      members: membersForUser,
+      members: membersWithAvailability,
     });
   } catch (error) {
     console.error("Get household members error:", error);
