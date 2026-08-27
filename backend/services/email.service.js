@@ -15,7 +15,15 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 30000,
   socketTimeout: 30000,
 });
+const dns = require("dns");
 
+dns.resolve4("smtp.gmail.com", (err, addresses) => {
+  if (err) {
+    console.error("DNS IPv4 failed:", err);
+  } else {
+    console.log("Gmail IPv4 addresses:", addresses);
+  }
+});
 transporter.verify((error, success) => {
   if (error) {
     console.error("SMTP connection failed:", error);
