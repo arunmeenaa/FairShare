@@ -1,9 +1,9 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  secure: Number(process.env.EMAIL_PORT) === 465,
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   family: 4,
 
   auth: {
@@ -15,6 +15,7 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 30000,
   socketTimeout: 30000,
 });
+
 transporter.verify((error, success) => {
   if (error) {
     console.error("SMTP connection failed:", error);
