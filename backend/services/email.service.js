@@ -4,17 +4,26 @@ const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: Number(process.env.EMAIL_PORT),
   secure: Number(process.env.EMAIL_PORT) === 465,
+  family: 4,
+
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
+
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+});
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("SMTP connection failed:", error);
+  } else {
+    console.log("SMTP server is ready");
+  }
 });
 
-const sendEmail = async ({
-  to,
-  subject,
-  html,
-}) => {
+const sendEmail = async ({ to, subject, html }) => {
   if (!to) {
     return;
   }
@@ -38,11 +47,7 @@ const sendEmail = async ({
   }
 };
 
-const sendNewExpenseEmail = async ({
-  recipient,
-  expense,
-  share,
-}) => {
+const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
   return sendEmail({
     to: recipient.email,
 
@@ -110,11 +115,7 @@ const sendNewExpenseEmail = async ({
   });
 };
 
-const sendExpenseUpdatedEmail = async ({
-  recipient,
-  expense,
-  share,
-}) => {
+const sendExpenseUpdatedEmail = async ({ recipient, expense, share }) => {
   return sendEmail({
     to: recipient.email,
 
@@ -178,11 +179,7 @@ const sendExpenseUpdatedEmail = async ({
   });
 };
 
-const sendAvailabilityEmail = async ({
-  recipient,
-  memberName,
-  status,
-}) => {
+const sendAvailabilityEmail = async ({ recipient, memberName, status }) => {
   const isAway = status === "away";
 
   return sendEmail({
@@ -211,9 +208,10 @@ const sendAvailabilityEmail = async ({
         </p>
 
         <p>
-          ${isAway
-            ? "This member will be excluded from automatic expense participation while away."
-            : "This member can now participate in automatic expense splitting."
+          ${
+            isAway
+              ? "This member will be excluded from automatic expense participation while away."
+              : "This member can now participate in automatic expense splitting."
           }
         </p>
       </div>
