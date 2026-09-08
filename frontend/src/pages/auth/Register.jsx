@@ -14,10 +14,7 @@ const FEATURES = [
 const Register = () => {
   const navigate = useNavigate();
   const { getCurrentUser } = useAuth();
-  const {
-  fetchHouseholds,
-  selectHousehold,
-} = useHousehold();
+  const { fetchHouseholds, selectHousehold } = useHousehold();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -49,99 +46,90 @@ const Register = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const name = formData.name.trim();
-  const email = formData.email.trim();
-  const password = formData.password;
-  const householdName = formData.householdName.trim();
-  const inviteCode = formData.inviteCode.trim().toUpperCase();
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const password = formData.password;
+    const householdName = formData.householdName.trim();
+    const inviteCode = formData.inviteCode.trim().toUpperCase();
 
-  if (!name) {
-    toast.error("Please enter your full name");
-    return;
-  }
-
-  if (!email) {
-    toast.error("Please enter your email address");
-    return;
-  }
-
-  if (password.length < 6) {
-    toast.error("Password must be at least 6 characters long");
-    return;
-  }
-
-  if (formData.householdMode === "create" && !householdName) {
-    toast.error("Please enter a household name");
-    return;
-  }
-
-  if (formData.householdMode === "join" && !inviteCode) {
-    toast.error("Please enter the invitation code");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const payload = {
-      name,
-      email,
-      password,
-      householdMode: formData.householdMode,
-      ...(formData.householdMode === "create" && {
-        householdName,
-      }),
-      ...(formData.householdMode === "join" && {
-        inviteCode,
-      }),
-    };
-
-    // Keep the response
-    const response = await api.post("/auth/register", payload);
-
-    // Refresh authenticated user
-    await getCurrentUser();
-
-    // Backend should return the household that was
-    // created or joined.
-    const createdHousehold = response.data?.household;
-
-    if (createdHousehold?._id) {
-      // Immediately select it
-      selectHousehold(createdHousehold);
-
-      // Also refresh the household list
-      await fetchHouseholds();
-    } else {
-      // Fallback for older backend response
-      await fetchHouseholds();
+    if (!name) {
+      toast.error("Please enter your full name");
+      return;
     }
 
-    toast.success(
-      formData.householdMode === "join"
-        ? "Account created and household joined!"
-        : "Account and household created successfully!"
-    );
+    if (!email) {
+      toast.error("Please enter your email address");
+      return;
+    }
 
-    navigate("/dashboard");
-  } catch (err) {
-    console.error("Registration failed:", err);
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
 
-    toast.error(
-      err.response?.data?.message ||
-        "Registration failed. Please try again."
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+    if (formData.householdMode === "create" && !householdName) {
+      toast.error("Please enter a household name");
+      return;
+    }
+
+    if (formData.householdMode === "join" && !inviteCode) {
+      toast.error("Please enter the invitation code");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        name,
+        email,
+        password,
+        householdMode: formData.householdMode,
+        ...(formData.householdMode === "create" && {
+          householdName,
+        }),
+        ...(formData.householdMode === "join" && {
+          inviteCode,
+        }),
+      };
+
+      const response = await api.post("/auth/register", payload);
+
+      await getCurrentUser();
+
+      const createdHousehold = response.data?.household;
+
+      if (createdHousehold?._id) {
+        selectHousehold(createdHousehold);
+
+        await fetchHouseholds();
+      } else {
+        await fetchHouseholds();
+      }
+
+      toast.success(
+        formData.householdMode === "join"
+          ? "Account created and household joined!"
+          : "Account and household created successfully!",
+      );
+
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Registration failed:", err);
+
+      toast.error(
+        err.response?.data?.message || "Registration failed. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="flex min-h-screen">
-
         {/* ================= LEFT BRAND PANEL ================= */}
         <div className="relative hidden overflow-hidden bg-indigo-600 lg:flex lg:w-1/2">
           {/* Decorative shapes */}
@@ -179,11 +167,14 @@ const Register = () => {
 
               <h1 className="text-4xl font-bold leading-tight text-white xl:text-5xl">
                 Get started with
-                <span className="block text-indigo-200">smarter expense sharing.</span>
+                <span className="block text-indigo-200">
+                  smarter expense sharing.
+                </span>
               </h1>
 
               <p className="mt-6 max-w-md text-base leading-7 text-indigo-100">
-                Create or join a household to automate bills, track contributions, and settle shared balances fairly.
+                Create or join a household to automate bills, track
+                contributions, and settle shared balances fairly.
               </p>
 
               {/* Features */}
@@ -205,7 +196,9 @@ const Register = () => {
                         />
                       </svg>
                     </div>
-                    <span className="text-sm font-medium text-indigo-100">{feature}</span>
+                    <span className="text-sm font-medium text-indigo-100">
+                      {feature}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -221,7 +214,6 @@ const Register = () => {
         {/* ================= RIGHT REGISTRATION FORM PANEL ================= */}
         <div className="flex w-full items-center justify-center px-5 py-10 sm:px-8 lg:w-1/2 lg:px-12 xl:px-20">
           <div className="w-full max-w-lg">
-
             {/* Mobile Header Logo */}
             <div className="mb-8 flex items-center justify-center gap-2.5 lg:hidden">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-sm shadow-indigo-200">
@@ -259,7 +251,6 @@ const Register = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              
               {/* Account Information Section */}
               <div className="space-y-4">
                 {/* Full Name */}
@@ -272,7 +263,12 @@ const Register = () => {
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -305,7 +301,12 @@ const Register = () => {
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -338,7 +339,12 @@ const Register = () => {
                   </label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <rect
                           x="5"
                           y="10"
@@ -373,10 +379,17 @@ const Register = () => {
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 transition hover:text-slate-600"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? (
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -385,7 +398,12 @@ const Register = () => {
                           />
                         </svg>
                       ) : (
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -423,7 +441,12 @@ const Register = () => {
                             : "bg-slate-100 text-slate-500"
                         }`}
                       >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -433,8 +456,12 @@ const Register = () => {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">Create household</p>
-                        <p className="text-xs text-slate-500">Become household admin</p>
+                        <p className="text-sm font-bold text-slate-900">
+                          Create household
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Become household admin
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -456,7 +483,12 @@ const Register = () => {
                             : "bg-slate-100 text-slate-500"
                         }`}
                       >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -466,8 +498,12 @@ const Register = () => {
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">Join household</p>
-                        <p className="text-xs text-slate-500">Use an invitation code</p>
+                        <p className="text-sm font-bold text-slate-900">
+                          Join household
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Use an invitation code
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -493,7 +529,8 @@ const Register = () => {
                       className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
                     />
                     <p className="mt-2 text-xs text-slate-500">
-                      You will receive an invitation code to invite your roommates.
+                      You will receive an invitation code to invite your
+                      roommates.
                     </p>
                   </div>
                 )}
@@ -535,9 +572,24 @@ const Register = () => {
               >
                 {loading ? (
                   <>
-                    <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+                    <svg
+                      className="h-5 w-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                      />
                     </svg>
                     Creating account...
                   </>
@@ -546,8 +598,18 @@ const Register = () => {
                     {formData.householdMode === "create"
                       ? "Create Account & Household"
                       : "Create Account & Join"}
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6l6 6-6 6" />
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 12h14m-6-6l6 6-6 6"
+                      />
                     </svg>
                   </>
                 )}
@@ -570,7 +632,6 @@ const Register = () => {
             </p>
           </div>
         </div>
-
       </div>
     </div>
   );

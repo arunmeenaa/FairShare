@@ -46,8 +46,6 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    console.log("Blocked CORS origin:", origin);
-
     return callback(new Error("Not allowed by CORS"));
   },
 
@@ -93,8 +91,4 @@ app.use("/api/profile", profileRoutes);
 
 const port = process.env.PORT || 5000;
 
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-
-  console.log("Allowed CORS origins:", allowedOrigins);
-});
+server.listen(port, () => {});

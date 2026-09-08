@@ -44,7 +44,7 @@ const getEligibleParticipants = async ({
     const awayMembers = await Availability.find({
       household: householdId,
       user: { $in: userIds },
-      status: "away",   
+      status: "away",
     });
 
     const awayUserIds = new Set(

@@ -214,6 +214,9 @@ const createExpense = async (req, res) => {
       .populate("participants.user", "name email")
       .populate("excludedMembers.user", "name email");
 
+    const emailJobs = [];
+    const notificationJobs = [];
+
     for (const participant of populatedExpense.participants) {
       const participantUserId = participant.user._id.toString();
 
@@ -221,41 +224,69 @@ const createExpense = async (req, res) => {
         continue;
       }
 
-      await createNotification({
-        householdId,
+      notificationJobs.push(
+        createNotification({
+          householdId,
 
-        recipientId: participant.user._id,
+          recipientId: participant.user._id,
 
-        type: "expense_created",
+          type: "expense_created",
 
-        title: "New expense added",
+          title: "New expense added",
 
-        message: `${
-          populatedExpense.description
-        } — ₹${populatedExpense.amount.toFixed(
-          2,
-        )}. Your share is ₹${participant.share.toFixed(2)}, paid by ${
-          populatedExpense.paidBy?.name || "a household member"
-        }.`,
+          message: `${populatedExpense.description} — ₹${populatedExpense.amount.toFixed(
+            2,
+          )}. Your share is ₹${participant.share.toFixed(2)}, paid by ${
+            populatedExpense.paidBy?.name || "a household member"
+          }.`,
 
-        data: {
-          expenseId: populatedExpense._id,
+          data: {
+            expenseId: populatedExpense._id,
 
-          amount: populatedExpense.amount,
+            amount: populatedExpense.amount,
 
-          share: participant.share,
+            share: participant.share,
 
-          paidBy: populatedExpense.paidBy._id,
+            paidBy: populatedExpense.paidBy._id,
 
-          category: populatedExpense.category,
-        },
-      });
-      await sendNewExpenseEmail({
-        recipient: participant.user,
-        expense: populatedExpense,
-        share: participant.share,
-      });
+            category: populatedExpense.category,
+          },
+        }),
+      );
+
+      if (participant.user?.email) {
+        emailJobs.push(
+          sendNewExpenseEmail({
+            recipient: participant.user,
+            expense: populatedExpense,
+            share: participant.share,
+          }),
+        );
+      }
     }
+
+    const [notificationResults, emailResults] = await Promise.all([
+      Promise.allSettled(notificationJobs),
+      Promise.allSettled(emailJobs),
+    ]);
+
+    notificationResults.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error(
+          "Expense notification failed:",
+          result.reason?.message || result.reason,
+        );
+      }
+    });
+
+    emailResults.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error(
+          "New expense email failed:",
+          result.reason?.message || result.reason,
+        );
+      }
+    });
 
     return res.status(201).json({
       message: "Expense added successfully",

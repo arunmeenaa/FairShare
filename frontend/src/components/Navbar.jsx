@@ -230,10 +230,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
       }
     };
@@ -241,10 +238,7 @@ const Navbar = () => {
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside,
-      );
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -320,14 +314,13 @@ const Navbar = () => {
       <nav className="hidden px-4 pt-3 lg:block">
         <div className="mx-auto max-w-7xl">
           <div className="relative grid min-h-[72px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center rounded-[24px] border border-white/75 bg-white/55 px-3 shadow-[0_18px_50px_rgba(15,23,42,0.10),inset_0_1px_0_rgba(255,255,255,0.85)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 dark:border-white/[0.10] dark:bg-[#0d1525]/70 dark:shadow-[0_20px_55px_rgba(0,0,0,0.40),inset_0_1px_0_rgba(255,255,255,0.06)] lg:px-4">
-            {/* Glass highlights */}
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent dark:via-white/25" />
 
             <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 rounded-l-[24px] bg-gradient-to-r from-white/25 to-transparent dark:from-indigo-400/[0.06]" />
 
             <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-violet-400/10 blur-3xl dark:bg-indigo-500/10" />
 
-            {/* ================= LEFT ================= */}
+            {/* LEFT */}
             <div className="relative z-10 flex min-w-0 items-center gap-2 lg:gap-3">
               <Link
                 to="/"
@@ -405,7 +398,7 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* ================= CENTER CAPSULE ================= */}
+            {/* CENTER */}
             <div className="relative z-10 justify-self-center">
               <div className="flex items-center gap-0.5 rounded-[17px] border border-white/85 bg-white/45 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_9px_28px_rgba(15,23,42,0.08)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.10] dark:bg-white/[0.045] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_32px_rgba(0,0,0,0.30)]">
                 <DesktopNavLink to="/" end>
@@ -430,14 +423,12 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* ================= RIGHT ================= */}
+            {/* RIGHT */}
             <div className="relative z-10 ml-auto flex items-center gap-1.5 justify-self-end xl:gap-2">
-              {/* Notification */}
               <div className="flex h-10 w-10 items-center justify-center rounded-[13px] border border-white/75 bg-white/40 text-slate-600 backdrop-blur-xl transition-all duration-200 hover:-translate-y-px hover:border-indigo-200/80 hover:bg-white/75 hover:text-indigo-600 dark:border-white/[0.10] dark:bg-white/[0.045] dark:text-slate-300 dark:hover:border-indigo-400/30 dark:hover:bg-white/[0.08] dark:hover:text-indigo-200">
                 <NotificationBell />
               </div>
 
-              {/* Theme */}
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -454,16 +445,10 @@ const Navbar = () => {
                 <ThemeToggleIcon theme={theme} />
               </button>
 
-              {/* Profile */}
-              <div
-                ref={menuRef}
-                className="relative"
-              >
+              <div ref={menuRef} className="relative">
                 <button
                   type="button"
-                  onClick={() =>
-                    setMenuOpen((previous) => !previous)
-                  }
+                  onClick={() => setMenuOpen((previous) => !previous)}
                   className="flex items-center gap-2 rounded-[15px] border border-transparent p-0.5 transition-all duration-200 hover:bg-white/50 focus:outline-none focus:ring-4 focus:ring-indigo-400/10 dark:hover:bg-white/[0.05]"
                   aria-expanded={menuOpen}
                   aria-haspopup="menu"
@@ -585,7 +570,6 @@ const Navbar = () => {
 
       {/* ========================================================= */}
       {/* MOBILE TOP BAR                                            */}
-      {/* NORMAL FLOW — NOT STICKY                                 */}
       {/* ========================================================= */}
 
       <header className="px-3 pt-2 lg:hidden">
@@ -626,23 +610,25 @@ const Navbar = () => {
       </header>
 
       {/* ========================================================= */}
-      {/* MOBILE BOTTOM GLASS CAPSULE                              */}
-      {/* FIXED                                                    */}
+      {/* MOBILE BOTTOM NAVIGATION                                  */}
       {/* ========================================================= */}
 
       <nav
-        className="pointer-events-none fixed inset-x-0 z-50 px-3 lg:hidden bottom-[max(10px,env(safe-area-inset-bottom))]"
-        aria-label="Mobile navigation"
-      >
-        <div className="relative mx-auto w-full max-w-md pointer-events-auto">
-          <div className="pointer-events-none absolute -inset-1 rounded-[29px] bg-indigo-500/5 blur-xl dark:bg-indigo-500/10" />
+  className="fixed bottom-0 left-1/2 z-50 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 px-0 pb-[max(10px,env(safe-area-inset-bottom))] lg:hidden"
+  aria-label="Mobile navigation"
+>
+  <div className="pointer-events-auto w-full">
+    <div className="pointer-events-none absolute -inset-1 rounded-[29px] bg-indigo-500/5 blur-xl dark:bg-indigo-500/10" />
 
-          <div className="relative overflow-hidden rounded-[26px] border border-white/80 bg-white/65 px-1.5 py-1.5 shadow-[0_16px_48px_rgba(15,23,42,0.17),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.10] dark:bg-[#0d1525]/78 dark:shadow-[0_18px_54px_rgba(0,0,0,0.50),inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-white/25" />
+    <div className="relative w-full overflow-hidden rounded-[26px] border border-white/80 bg-white/65 px-1.5 py-1.5 shadow-[0_16px_48px_rgba(15,23,42,0.17),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.10] dark:bg-[#0d1525]/78 dark:shadow-[0_18px_54px_rgba(0,0,0,0.50),inset_0_1px_0_rgba(255,255,255,0.06)]">
 
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent dark:from-white/[0.025]" />
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90 dark:via-white/25" />
 
-            <div className="relative flex items-stretch">
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-transparent dark:from-white/[0.025]" />
+
+      <div className="relative flex items-stretch">
+        {/* KEEP YOUR EXISTING NAVLINKS HERE */}
+    
               {/* Home */}
               <NavLink
                 to="/"
@@ -658,16 +644,13 @@ const Navbar = () => {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 sm:w-12 ${
+                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
                         isActive
                           ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_4px_12px_rgba(99,102,241,0.10)] dark:from-indigo-400/20 dark:to-violet-400/10"
                           : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
                       }`}
                     >
-                      <BottomNavIcon
-                        type="dashboard"
-                        active={isActive}
-                      />
+                      <BottomNavIcon type="dashboard" active={isActive} />
                     </span>
 
                     <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
@@ -691,16 +674,13 @@ const Navbar = () => {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 sm:w-12 ${
+                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
                         isActive
                           ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_4px_12px_rgba(99,102,241,0.10)] dark:from-indigo-400/20 dark:to-violet-400/10"
                           : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
                       }`}
                     >
-                      <BottomNavIcon
-                        type="expenses"
-                        active={isActive}
-                      />
+                      <BottomNavIcon type="expenses" active={isActive} />
                     </span>
 
                     <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
@@ -724,16 +704,13 @@ const Navbar = () => {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 sm:w-12 ${
+                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
                         isActive
                           ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_4px_12px_rgba(99,102,241,0.10)] dark:from-indigo-400/20 dark:to-violet-400/10"
                           : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
                       }`}
                     >
-                      <BottomNavIcon
-                        type="settlement"
-                        active={isActive}
-                      />
+                      <BottomNavIcon type="settlement" active={isActive} />
                     </span>
 
                     <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
@@ -757,16 +734,13 @@ const Navbar = () => {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 sm:w-12 ${
+                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
                         isActive
                           ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_4px_12px_rgba(99,102,241,0.10)] dark:from-indigo-400/20 dark:to-violet-400/10"
                           : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
                       }`}
                     >
-                      <BottomNavIcon
-                        type="members"
-                        active={isActive}
-                      />
+                      <BottomNavIcon type="members" active={isActive} />
                     </span>
 
                     <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
@@ -780,9 +754,7 @@ const Navbar = () => {
               <button
                 type="button"
                 onClick={() =>
-                  setMobileMoreOpen(
-                    (previous) => !previous,
-                  )
+                  setMobileMoreOpen((previous) => !previous)
                 }
                 className={`group flex min-h-[54px] min-w-0 flex-1 flex-col items-center justify-center rounded-[19px] py-1 transition-all duration-200 touch-manipulation select-none ${
                   mobileMoreOpen
@@ -793,7 +765,7 @@ const Navbar = () => {
                 aria-expanded={mobileMoreOpen}
               >
                 <span
-                  className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 sm:w-12 ${
+                  className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
                     mobileMoreOpen
                       ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 dark:from-indigo-400/20 dark:to-violet-400/10"
                       : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
@@ -1028,9 +1000,7 @@ const Navbar = () => {
                     <ThemeToggleIcon theme={theme} />
                   </span>
 
-                  {theme === "dark"
-                    ? "Light mode"
-                    : "Dark mode"}
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
                 </span>
 
                 <span className="rounded-full border border-white/60 bg-white/50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:border-white/[0.06] dark:bg-white/[0.04] dark:text-slate-400">

@@ -5,7 +5,8 @@ let io;
 const allowedOrigins = [
   "http://localhost:5173",
   "https://fairshare-splits.vercel.app",
-];
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 const initializeSocket = (server) => {
   io = new Server(server, {
@@ -14,46 +15,55 @@ const initializeSocket = (server) => {
       methods: ["GET", "POST"],
       credentials: true,
     },
-    transports: ["polling", "websocket"],
+
+    transports: ["websocket", "polling"],
+
+    // Allow reconnection
+    pingInterval: 25000,
+    pingTimeout: 20000,
   });
 
   io.on("connection", (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
-
-    socket.on("join-household", (householdId) => {
-      if (!householdId) return;
-
-      socket.join(`household:${householdId}`);
-
-      console.log(
-        `Socket ${socket.id} joined household ${householdId}`
-      );
-    });
+    console.log("Socket connected:", socket.id);
 
     socket.on("join-user", (userId) => {
-      if (!userId) return;
+      if (!userId) {
+        return;
+      }
 
-      socket.join(`user:${userId}`);
+      const room = `user:${userId}`;
 
-      console.log(`Socket ${socket.id} joined user room ${userId}`);
+      socket.join(room);
+
+      console.log(`Socket ${socket.id} joined ${room}`);
+    });
+
+    socket.on("join-household", (householdId) => {
+      if (!householdId) {
+        return;
+      }
+
+      const room = `household:${householdId}`;
+
+      socket.join(room);
+
+      console.log(`Socket ${socket.id} joined ${room}`);
     });
 
     socket.on("leave-household", (householdId) => {
-      if (!householdId) return;
+      if (!householdId) {
+        return;
+      }
 
-      socket.leave(`household:${householdId}`);
+      const room = `household:${householdId}`;
 
-      console.log(
-        `Socket ${socket.id} left household ${householdId}`
-      );
+      socket.leave(room);
+
+      console.log(`Socket ${socket.id} left ${room}`);
     });
 
     socket.on("disconnect", (reason) => {
       console.log(`Socket disconnected: ${socket.id}`, reason);
-    });
-
-    socket.on("connect_error", (error) => {
-      console.error(`Socket error for ${socket.id}:`, error.message);
     });
   });
 

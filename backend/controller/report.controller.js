@@ -10,10 +10,6 @@ const {
 
 const { generateExpenseReceipt } = require("../services/receipt.service");
 
-// ==========================================
-// CONTROLLERS
-// ==========================================
-
 const generateReceipt = async (req, res) => {
   try {
     const { householdId, expenseId } = req.params;
@@ -337,7 +333,12 @@ const generateMonthlyReceipt = async (req, res) => {
       emptyMessage(doc, "No pending settlement transactions for your account.");
     } else {
       personalTransactions.forEach((transaction) => {
-        drawTransactionCard(doc, transaction, calculation.memberBalances, household);
+        drawTransactionCard(
+          doc,
+          transaction,
+          calculation.memberBalances,
+          household,
+        );
       });
     }
 
@@ -461,7 +462,12 @@ const generateHouseholdReceipt = async (req, res) => {
       );
     } else {
       transactions.forEach((transaction) => {
-        drawTransactionCard(doc, transaction, calculation.memberBalances, household);
+        drawTransactionCard(
+          doc,
+          transaction,
+          calculation.memberBalances,
+          household,
+        );
       });
     }
 
@@ -476,10 +482,6 @@ const generateHouseholdReceipt = async (req, res) => {
     }
   }
 };
-
-// ==========================================
-// PDF ENGINE & UI RENDERING
-// ==========================================
 
 const PAGE_CONFIG = {
   width: 595.28,
@@ -498,7 +500,7 @@ const PALETTE = {
   border: "#E2E8F0",
   surface: "#FFFFFF",
   surfaceAlt: "#F8FAFC",
-  
+
   // Subtle Red/Orange Theme for Excluded/Away
   awayBg: "#FFF7ED",
   awayBorder: "#FFEDD5",
@@ -554,17 +556,9 @@ const drawDocumentHeader = (doc, { title, subtitle, rightText }) => {
 
   doc.y = startY + 28;
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(15)
-    .fillColor(PALETTE.dark)
-    .text(title);
+  doc.font("Helvetica-Bold").fontSize(15).fillColor(PALETTE.dark).text(title);
 
-  doc
-    .font("Helvetica")
-    .fontSize(9.5)
-    .fillColor(PALETTE.muted)
-    .text(subtitle);
+  doc.font("Helvetica").fontSize(9.5).fillColor(PALETTE.muted).text(subtitle);
 
   doc.moveDown(0.6);
 
@@ -628,9 +622,7 @@ const drawMemberTable = (doc, memberBalances, household) => {
   ensureSpace(doc, 40 + memberBalances.length * rowHeight);
 
   const headerY = doc.y;
-  doc
-    .roundedRect(startX, headerY, width, 22, 4)
-    .fill(PALETTE.surfaceAlt);
+  doc.roundedRect(startX, headerY, width, 22, 4).fill(PALETTE.surfaceAlt);
 
   doc
     .font("Helvetica-Bold")
@@ -639,7 +631,10 @@ const drawMemberTable = (doc, memberBalances, household) => {
     .text("MEMBER", startX + 10, headerY + 7)
     .text("PAID", startX + 220, headerY + 7, { width: 80, align: "right" })
     .text("SHARE", startX + 310, headerY + 7, { width: 80, align: "right" })
-    .text("NET BALANCE", startX + 400, headerY + 7, { width: 105, align: "right" });
+    .text("NET BALANCE", startX + 400, headerY + 7, {
+      width: 105,
+      align: "right",
+    });
 
   doc.y = headerY + 22;
 
@@ -671,8 +666,8 @@ const drawMemberTable = (doc, memberBalances, household) => {
       balance > 0
         ? PALETTE.successText
         : balance < 0
-        ? PALETTE.dangerText
-        : PALETTE.muted;
+          ? PALETTE.dangerText
+          : PALETTE.muted;
 
     doc
       .font("Helvetica-Bold")
@@ -728,8 +723,12 @@ const drawExpenseCard = (doc, expense, currentUserId, personal) => {
 
   let personalBadgeHeight = 0;
   const isPayer = getId(expense.paidBy) === currentUserId;
-  const myParticipant = participants.find((p) => getId(p.user) === currentUserId);
-  const myExcluded = excludedMembers.find((e) => getId(e.user) === currentUserId);
+  const myParticipant = participants.find(
+    (p) => getId(p.user) === currentUserId,
+  );
+  const myExcluded = excludedMembers.find(
+    (e) => getId(e.user) === currentUserId,
+  );
 
   if (personal && currentUserId) {
     if (myExcluded) {
@@ -952,7 +951,11 @@ const drawTransactionCard = (doc, transaction, memberBalances, household) => {
   const y = doc.y;
   const height = 36;
 
-  const fromName = resolveMemberName(transaction.from, memberBalances, household);
+  const fromName = resolveMemberName(
+    transaction.from,
+    memberBalances,
+    household,
+  );
   const toName = resolveMemberName(transaction.to, memberBalances, household);
 
   doc
@@ -1068,10 +1071,6 @@ const ensureSpace = (doc, requiredSpace) => {
     doc.addPage();
   }
 };
-
-// ==========================================
-// UTILITIES & DATA RESOLVERS
-// ==========================================
 
 const getMonthlyExpenses = async (householdId, month, year) => {
   const startDate = new Date(Date.UTC(year, month - 1, 1));

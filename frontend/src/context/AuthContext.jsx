@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 import api from "../services/api";
-import socket from "../services/socket";
 
 const AuthContext = createContext();
 
@@ -40,38 +39,6 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  useEffect(() => {
-    if (loading) return;
-
-    if (!user) {
-      if (socket.connected) {
-        socket.disconnect();
-      }
-
-      return;
-    }
-
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    const joinUser = () => {
-      console.log("Joining user room:", user._id);
-
-      socket.emit("join-user", user._id);
-    };
-
-    if (socket.connected) {
-      joinUser();
-    } else {
-      socket.once("connect", joinUser);
-    }
-
-    return () => {
-      socket.off("connect", joinUser);
-    };
-  }, [user, loading]);
-
   const updateUser = (updatedUser) => {
     setUser((prev) => ({
       ...prev,
@@ -87,13 +54,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
 
-      // Clear selected household
       localStorage.removeItem("selectedHouseholdId");
-
-      // Disconnect socket
-      if (socket.connected) {
-        socket.disconnect();
-      }
     }
   };
 

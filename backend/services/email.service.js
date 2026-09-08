@@ -1,351 +1,355 @@
 const axios = require("axios");
 
-const sendEmail = async ({ to, subject, html }) => {
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+
+const escapeHtml = (value = "") =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+const requireBrevoConfig = () => {
+  if (!process.env.BREVO_API_KEY) {
+    throw new Error("BREVO_API_KEY is not configured");
+  }
+
+  if (!process.env.BREVO_FROM_EMAIL) {
+    throw new Error("BREVO_FROM_EMAIL is not configured");
+  }
+};
+
+const sendEmail = async ({ to, subject, text, html }) => {
   if (!to) {
-    return;
+    throw new Error("Recipient email is required");
+  }
+
+  if (!subject) {
+    throw new Error("Email subject is required");
+  }
+
+  if (!text && !html) {
+    throw new Error("Email content is required");
+  }
+
+  requireBrevoConfig();
+
+  const payload = {
+    sender: {
+      name: process.env.BREVO_FROM_NAME || "FairShare",
+      email: process.env.BREVO_FROM_EMAIL,
+    },
+    to: [
+      {
+        email: to,
+      },
+    ],
+    subject,
+  };
+
+  if (text) {
+    payload.textContent = text;
+  }
+
+  if (html) {
+    payload.htmlContent = html;
   }
 
   try {
-    const response = await axios.post(
-      "https://api.brevo.com/v3/smtp/email",
-      {
-        sender: {
-          name: process.env.BREVO_FROM_NAME || "FairShare",
-          email: process.env.BREVO_FROM_EMAIL,
-        },
-
-        to: [
-          {
-            email: to,
-          },
-        ],
-
-        subject,
-        htmlContent: html,
+    const response = await axios.post(BREVO_API_URL, payload, {
+      headers: {
+        accept: "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "content-type": "application/json",
       },
-      {
-        headers: {
-          accept: "application/json",
-          "api-key": process.env.BREVO_API_KEY,
-          "content-type": "application/json",
-        },
-
-        timeout: 30000,
-      },
-    );
-
-    console.log("Email sent successfully:", response.data?.messageId);
+      timeout: 30000,
+    });
 
     return response.data;
   } catch (error) {
-    console.error(
-      "Brevo email sending failed:",
-      error.response?.data || error.message,
-    );
+    const brevoError = error.response?.data;
 
-    // Don't break the main API request if email fails.
+    const message =
+      brevoError?.message ||
+      brevoError?.code ||
+      error.message ||
+      "Unknown Brevo error";
+
+    console.error("Brevo email sending failed:", {
+      to,
+      subject,
+      status: error.response?.status,
+      response: brevoError,
+      message,
+    });
+
+    const sendError = new Error(`Brevo email sending failed: ${message}`);
+
+    sendError.status = error.response?.status;
+    sendError.response = brevoError;
+    sendError.cause = error;
+
+    throw sendError;
   }
 };
-const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
-  return sendEmail({
-    to: recipient.email,
 
-    subject: `New expense: ${expense.description}`,
+/*
+ * Expense/availability emails should not break the main
+ * application operation when Brevo is temporarily unavailable.
+ */
+const sendBestEffortEmail = async (emailOptions, label) => {
+  try {
+    return await sendEmail(emailOptions);
+  } catch (error) {
+    console.error(`${label} failed:`, error.message);
+    return null;
+  }
+};
 
-    html: `
-      <div
-        style="
-          font-family: Arial, sans-serif;
-          max-width: 600px;
-          margin: auto;
-        "
-      >
+const buildExpenseHtml = ({
+  title,
+  intro,
+  recipient,
+  expense,
+  share,
+  showUpdatedAmount = false,
+}) => {
+  const safeRecipientName = escapeHtml(recipient?.name || "there");
 
-        <h2 style="color: #2563eb;">
-          FairShare
-        </h2>
+  const safeDescription = escapeHtml(expense?.description || "Expense");
 
-        <h3>New expense added</h3>
+  const safePayer = escapeHtml(expense?.paidBy?.name || "Household member");
 
-        <p>
-          Hi ${recipient.name},
-        </p>
+  const safeShare = Number(share || 0).toFixed(2);
 
-        <p>
-          A new expense has been added to your household.
-        </p>
+  const safeAmount = Number(expense?.amount || 0).toFixed(2);
 
-        <table
-          style="
-            border-collapse: collapse;
-            width: 100%;
-          "
-        >
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Description
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ${expense.description}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Amount
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ₹${Number(expense.amount).toFixed(2)}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Paid by
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ${expense.paidBy?.name || "Household member"}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Your share
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ₹${Number(share).toFixed(2)}
-            </td>
-          </tr>
-
-        </table>
-
-        <p style="margin-top: 20px;">
-          You can open FairShare to view
-          the complete expense details.
-        </p>
-
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.6;">
+      <div style="padding:24px 0 16px;">
+        <h2 style="margin:0;color:#4f46e5;">FairShare</h2>
       </div>
-    `,
-  });
+
+      <div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+        <div style="padding:20px;background:#eef2ff;border-bottom:1px solid #e0e7ff;">
+          <h3 style="margin:0;color:#1e1b4b;">
+            ${escapeHtml(title)}
+          </h3>
+        </div>
+
+        <div style="padding:20px;">
+          <p style="margin-top:0;">
+            Hi ${safeRecipientName},
+          </p>
+
+          <p>${escapeHtml(intro)}</p>
+
+          <table style="border-collapse:collapse;width:100%;font-size:14px;">
+            <tr>
+              <td style="padding:10px;border:1px solid #e2e8f0;font-weight:600;">
+                Description
+              </td>
+              <td style="padding:10px;border:1px solid #e2e8f0;">
+                ${safeDescription}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px;border:1px solid #e2e8f0;font-weight:600;">
+                ${showUpdatedAmount ? "Updated amount" : "Amount"}
+              </td>
+
+              <td style="padding:10px;border:1px solid #e2e8f0;">
+                ₹${safeAmount}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px;border:1px solid #e2e8f0;font-weight:600;">
+                Paid by
+              </td>
+
+              <td style="padding:10px;border:1px solid #e2e8f0;">
+                ${safePayer}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:10px;border:1px solid #e2e8f0;font-weight:600;">
+                Your share
+              </td>
+
+              <td style="padding:10px;border:1px solid #e2e8f0;">
+                ₹${safeShare}
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin-bottom:0;margin-top:20px;color:#475569;">
+            Open FairShare to view the complete expense details.
+          </p>
+        </div>
+      </div>
+
+      <p style="margin:20px 0 0;color:#94a3b8;font-size:12px;">
+        This is an automated message from FairShare.
+      </p>
+    </div>
+  `;
+};
+
+const sendNewExpenseEmail = async ({ recipient, expense, share }) => {
+  const description = expense?.description || "Expense";
+
+  const amount = Number(expense?.amount || 0).toFixed(2);
+
+  const payer = expense?.paidBy?.name || "Household member";
+
+  const userShare = Number(share || 0).toFixed(2);
+
+  return sendBestEffortEmail(
+    {
+      to: recipient?.email,
+
+      subject: `New expense: ${description}`,
+
+      text: [
+        `Hi ${recipient?.name || "there"},`,
+        "",
+        "A new expense has been added to your household.",
+        "",
+        `Description: ${description}`,
+        `Amount: ₹${amount}`,
+        `Paid by: ${payer}`,
+        `Your share: ₹${userShare}`,
+        "",
+        "Open FairShare to view the complete expense details.",
+      ].join("\n"),
+
+      html: buildExpenseHtml({
+        title: "New expense added",
+        intro: "A new expense has been added to your household.",
+        recipient,
+        expense,
+        share,
+      }),
+    },
+    "New expense email",
+  );
 };
 
 const sendExpenseUpdatedEmail = async ({ recipient, expense, share }) => {
-  return sendEmail({
-    to: recipient.email,
+  const description = expense?.description || "Expense";
 
-    subject: `Expense updated: ${expense.description}`,
+  const amount = Number(expense?.amount || 0).toFixed(2);
 
-    html: `
-      <div
-        style="
-          font-family: Arial, sans-serif;
-          max-width: 600px;
-          margin: auto;
-        "
-      >
+  const payer = expense?.paidBy?.name || "Household member";
 
-        <h2 style="color: #2563eb;">
-          FairShare
-        </h2>
+  const userShare = Number(share || 0).toFixed(2);
 
-        <h3>Expense updated</h3>
+  return sendBestEffortEmail(
+    {
+      to: recipient?.email,
 
-        <p>
-          Hi ${recipient.name},
-        </p>
+      subject: `Expense updated: ${description}`,
 
-        <p>
-          An expense in your household
-          has been updated.
-        </p>
+      text: [
+        `Hi ${recipient?.name || "there"},`,
+        "",
+        "An expense in your household has been updated.",
+        "",
+        `Description: ${description}`,
+        `Updated amount: ₹${amount}`,
+        `Paid by: ${payer}`,
+        `Your share: ₹${userShare}`,
+        "",
+        "Open FairShare to view the complete expense details.",
+      ].join("\n"),
 
-        <table
-          style="
-            border-collapse: collapse;
-            width: 100%;
-          "
-        >
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Description
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ${expense.description}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Updated amount
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ₹${Number(expense.amount).toFixed(2)}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Paid by
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ${expense.paidBy?.name || "Household member"}
-            </td>
-          </tr>
-
-          <tr>
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              Your share
-            </td>
-
-            <td
-              style="
-                padding: 8px;
-                border: 1px solid #ddd;
-              "
-            >
-              ₹${Number(share).toFixed(2)}
-            </td>
-          </tr>
-
-        </table>
-
-      </div>
-    `,
-  });
+      html: buildExpenseHtml({
+        title: "Expense updated",
+        intro: "An expense in your household has been updated.",
+        recipient,
+        expense,
+        share,
+        showUpdatedAmount: true,
+      }),
+    },
+    "Expense updated email",
+  );
 };
 
 const sendAvailabilityEmail = async ({ recipient, memberName, status }) => {
   const isAway = status === "away";
 
-  return sendEmail({
-    to: recipient.email,
+  const normalizedMemberName = memberName || "A household member";
 
-    subject: `${memberName} is now ${isAway ? "Away" : "Available"}`,
+  const statusLabel = isAway ? "Away" : "Available";
 
-    html: `
-      <div
-        style="
-          font-family: Arial, sans-serif;
-          max-width: 600px;
-          margin: auto;
-        "
-      >
+  const text = [
+    `Hi ${recipient?.name || "there"},`,
+    "",
+    `${normalizedMemberName} is now marked as ${statusLabel}.`,
+    "",
+    isAway
+      ? "This member will be excluded from automatic expense participation while away."
+      : "This member can now participate in automatic expense splitting.",
+  ].join("\n");
 
-        <h2 style="color: #2563eb;">
-          FairShare
-        </h2>
-
-        <h3>
-          Availability updated
-        </h3>
-
-        <p>
-          Hi ${recipient.name},
-        </p>
-
-        <p>
-          <strong>${memberName}</strong>
-          is now marked as
-          <strong>
-            ${isAway ? "Away" : "Available"}
-          </strong>.
-        </p>
-
-        <p>
-          ${
-            isAway
-              ? "This member will be excluded from automatic expense participation while away."
-              : "This member can now participate in automatic expense splitting."
-          }
-        </p>
-
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#0f172a;line-height:1.6;">
+      <div style="padding:24px 0 16px;">
+        <h2 style="margin:0;color:#4f46e5;">FairShare</h2>
       </div>
-    `,
-  });
+
+      <div style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+        <div style="padding:20px;background:#eef2ff;border-bottom:1px solid #e0e7ff;">
+          <h3 style="margin:0;color:#1e1b4b;">
+            Availability updated
+          </h3>
+        </div>
+
+        <div style="padding:20px;">
+          <p style="margin-top:0;">
+            Hi ${escapeHtml(recipient?.name || "there")},
+          </p>
+
+          <p>
+            <strong>
+              ${escapeHtml(normalizedMemberName)}
+            </strong>
+            is now marked as
+            <strong>
+              ${escapeHtml(statusLabel)}
+            </strong>.
+          </p>
+
+          <p>
+            ${escapeHtml(
+              isAway
+                ? "This member will be excluded from automatic expense participation while away."
+                : "This member can now participate in automatic expense splitting.",
+            )}
+          </p>
+        </div>
+      </div>
+
+      <p style="margin:20px 0 0;color:#94a3b8;font-size:12px;">
+        This is an automated message from FairShare.
+      </p>
+    </div>
+  `;
+
+  return sendBestEffortEmail(
+    {
+      to: recipient?.email,
+      subject: `${normalizedMemberName} is now ${statusLabel}`,
+      text,
+      html,
+    },
+    "Availability email",
+  );
 };
 
 module.exports = {
@@ -353,4 +357,5 @@ module.exports = {
   sendNewExpenseEmail,
   sendExpenseUpdatedEmail,
   sendAvailabilityEmail,
+  escapeHtml,
 };
