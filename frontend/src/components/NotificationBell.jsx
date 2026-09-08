@@ -114,7 +114,7 @@ const NotificationBell = () => {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white dark:focus:ring-indigo-400/30"
         aria-label="Notifications"
       >
         <svg
@@ -133,7 +133,7 @@ const NotificationBell = () => {
 
         {/* Unread Counter Badge */}
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:bg-indigo-500 dark:ring-[#0d1525]">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -141,14 +141,14 @@ const NotificationBell = () => {
 
       {/* Dropdown Container */}
       {open && (
-        <div className="absolute right-0 top-12 z-[1000] w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+        <div className="absolute right-0 top-12 z-[1000] w-[min(360px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/80 bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.16)] ring-1 ring-slate-900/5 backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.10] dark:bg-[#111827]/90 dark:shadow-[0_22px_65px_rgba(0,0,0,0.52)] dark:ring-white/[0.04]">
           
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.035]">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200">
                   {unreadCount} new
                 </span>
               )}
@@ -159,11 +159,11 @@ const NotificationBell = () => {
                 type="button"
                 disabled={markingAll}
                 onClick={handleMarkAllAsRead}
-                className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+                 className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 transition hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50 dark:text-indigo-300 dark:hover:text-indigo-200"
               >
                 {markingAll ? (
                   <>
-                    <svg className="h-3.5 w-3.5 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24">
+                     <svg className="h-3.5 w-3.5 animate-spin text-indigo-600 dark:text-indigo-300" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                     </svg>
@@ -182,27 +182,27 @@ const NotificationBell = () => {
           </div>
 
           {/* List Area */}
-          <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-100 dark:divide-white/[0.07]">
             {loading ? (
               <div className="space-y-3 p-4">
                 {[1, 2, 3].map((item) => (
                   <div key={item} className="flex animate-pulse gap-3">
-                    <div className="h-9 w-9 shrink-0 rounded-xl bg-slate-200" />
+                    <div className="h-9 w-9 shrink-0 rounded-xl bg-slate-200 dark:bg-white/[0.09]" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3.5 w-3/4 rounded bg-slate-200" />
-                      <div className="h-3 w-full rounded bg-slate-100" />
-                      <div className="h-2.5 w-1/3 rounded bg-slate-100" />
+                      <div className="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-white/[0.09]" />
+                      <div className="h-3 w-full rounded bg-slate-100 dark:bg-white/[0.06]" />
+                      <div className="h-2.5 w-1/3 rounded bg-slate-100 dark:bg-white/[0.06]" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : notifications.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-xl dark:bg-white/[0.07]">
                   🔔
                 </div>
-                <p className="text-sm font-semibold text-slate-800">No notifications</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">No notifications</p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   You're all caught up with household activity.
                 </p>
               </div>
@@ -217,8 +217,8 @@ const NotificationBell = () => {
                     onClick={() => handleNotificationClick(notification)}
                     className={`group cursor-pointer px-4 py-3.5 transition ${
                       isUnread
-                        ? "bg-indigo-50/40 hover:bg-indigo-50/70"
-                        : "bg-white hover:bg-slate-50"
+                         ? "bg-indigo-50/40 hover:bg-indigo-50/70 dark:bg-indigo-400/[0.08] dark:hover:bg-indigo-400/[0.13]"
+                         : "bg-white hover:bg-slate-50 dark:bg-transparent dark:hover:bg-white/[0.045]"
                     }`}
                   >
                     <div className="flex gap-3">
@@ -226,8 +226,8 @@ const NotificationBell = () => {
                       <div
                         className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm ${
                           isUnread
-                            ? "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200"
-                            : "bg-slate-100 text-slate-600"
+                             ? "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-400/15 dark:text-indigo-200 dark:ring-indigo-300/20"
+                             : "bg-slate-100 text-slate-600 dark:bg-white/[0.07] dark:text-slate-300"
                         }`}
                       >
                         {icon}
@@ -239,8 +239,8 @@ const NotificationBell = () => {
                           <p
                             className={`truncate text-sm ${
                               isUnread
-                                ? "font-bold text-slate-900"
-                                : "font-semibold text-slate-700"
+                                 ? "font-bold text-slate-900 dark:text-white"
+                                 : "font-semibold text-slate-700 dark:text-slate-200"
                             }`}
                           >
                             {notification.title}
@@ -251,11 +251,11 @@ const NotificationBell = () => {
                           )}
                         </div>
 
-                        <p className="mt-0.5 text-xs leading-relaxed text-slate-600 line-clamp-2">
+                         <p className="mt-0.5 text-xs leading-relaxed text-slate-600 line-clamp-2 dark:text-slate-400">
                           {notification.message}
                         </p>
 
-                        <p className="mt-1.5 text-[10px] font-medium text-slate-400">
+                         <p className="mt-1.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">
                           {formatDate(notification.createdAt)}
                         </p>
                       </div>

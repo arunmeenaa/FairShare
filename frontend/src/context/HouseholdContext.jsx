@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import api from "../services/api";
 import socket from "../services/socket";
@@ -15,191 +10,144 @@ export const HouseholdProvider = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
 
   const [households, setHouseholds] = useState([]);
-  const [currentHousehold, setCurrentHousehold] =
-    useState(null);
-
+  const [currentHousehold, setCurrentHousehold] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // =========================
-  // FETCH HOUSEHOLDS
-  // =========================
+  // Prevent an older request from overwriting newer state
+  const requestIdRef = useRef(0);
 
   const fetchHouseholds = async () => {
-    try {
-      setLoading(true);
-
-      const response = await api.get(
-        "/households/my-households",
-      );
-
-      const data =
-        response.data.households || [];
-
-      setHouseholds(data);
-
-      // Restore previously selected household
-      const savedHouseholdId =
-        localStorage.getItem(
-          "selectedHouseholdId",
-        );
-
-      if (savedHouseholdId) {
-        const savedHousehold = data.find(
-          (household) =>
-            household._id === savedHouseholdId,
-        );
-
-        if (savedHousehold) {
-          setCurrentHousehold(
-            savedHousehold,
-          );
-
-          return;
-        }
-      }
-
-      // Select first household
-      if (data.length > 0) {
-        setCurrentHousehold(data[0]);
-
-        localStorage.setItem(
-          "selectedHouseholdId",
-          data[0]._id,
-        );
-      } else {
-        setCurrentHousehold(null);
-
-        localStorage.removeItem(
-          "selectedHouseholdId",
-        );
-      }
-    } catch (error) {
-      console.error(
-        "Failed to fetch households:",
-        error,
-      );
-
-      setHouseholds([]);
-      setCurrentHousehold(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // =========================
-  // AUTH → HOUSEHOLDS
-  // =========================
-
-  useEffect(() => {
-    // AuthContext is still checking /auth/me
-    if (authLoading) {
-      return;
-    }
-
-    // User is logged out
     if (!user) {
       setHouseholds([]);
       setCurrentHousehold(null);
       setLoading(false);
+      return [];
+    }
 
-      localStorage.removeItem(
-        "selectedHouseholdId",
-      );
+    const requestId = ++requestIdRef.current;
+
+    try {
+      setLoading(true);
+
+      const response = await api.get("/households/my-households");
+
+      const data = Array.isArray(response.data?.households)
+        ? response.data.households
+        : [];
+
+      // Ignore stale request
+      if (requestId !== requestIdRef.current) {
+        return data;
+      }
+
+      setHouseholds(data);
+
+      const savedHouseholdId = localStorage.getItem("selectedHouseholdId");
+
+      // Restore saved household
+      if (savedHouseholdId) {
+        const savedHousehold = data.find(
+          (household) =>
+            household._id?.toString() === savedHouseholdId.toString(),
+        );
+
+        if (savedHousehold) {
+          setCurrentHousehold(savedHousehold);
+          return data;
+        }
+      }
+
+      // No saved household -> select first one
+      if (data.length > 0) {
+        setCurrentHousehold(data[0]);
+
+        localStorage.setItem("selectedHouseholdId", data[0]._id);
+      } else {
+        setCurrentHousehold(null);
+        localStorage.removeItem("selectedHouseholdId");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Failed to fetch households:", error);
+
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
+
+      return [];
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      requestIdRef.current += 1;
+
+      setHouseholds([]);
+      setCurrentHousehold(null);
+      setLoading(false);
+
+      localStorage.removeItem("selectedHouseholdId");
 
       return;
     }
 
-    // User is authenticated
     fetchHouseholds();
   }, [user, authLoading]);
-
-  // =========================
-  // SELECT HOUSEHOLD
-  // =========================
 
   const selectHousehold = (household) => {
     setCurrentHousehold(household);
 
     if (household?._id) {
-      localStorage.setItem(
-        "selectedHouseholdId",
-        household._id,
-      );
+      localStorage.setItem("selectedHouseholdId", household._id);
     }
   };
 
-  // =========================
-  // JOIN HOUSEHOLD SOCKET ROOM
-  // =========================
-
   useEffect(() => {
-    if (!currentHousehold) {
+    if (!currentHousehold?._id) {
       return;
     }
 
-    const householdId =
-      currentHousehold._id;
+    const householdId = currentHousehold._id;
 
     const joinHousehold = () => {
-      console.log(
-        "Joining household:",
-        householdId,
-      );
+      console.log("Joining household:", householdId);
 
-      socket.emit(
-        "join-household",
-        householdId,
-      );
+      socket.emit("join-household", householdId);
     };
 
     if (socket.connected) {
       joinHousehold();
     } else {
-      socket.once(
-        "connect",
-        joinHousehold,
-      );
+      socket.once("connect", joinHousehold);
     }
 
     return () => {
-      socket.off(
-        "connect",
-        joinHousehold,
-      );
+      socket.off("connect", joinHousehold);
 
       if (socket.connected) {
-        socket.emit(
-          "leave-household",
-          householdId,
-        );
+        socket.emit("leave-household", householdId);
       }
     };
   }, [currentHousehold]);
 
-  // =========================
-  // REAL-TIME NOTIFICATIONS
-  // =========================
-
   useEffect(() => {
-    const handleNotification = (
-      notification,
-    ) => {
-      console.log(
-        "REAL-TIME NOTIFICATION:",
-        notification,
-      );
+    const handleNotification = (notification) => {
+      console.log("REAL-TIME NOTIFICATION:", notification);
     };
 
-    socket.on(
-      "notification",
-      handleNotification,
-    );
+    socket.on("notification", handleNotification);
 
     return () => {
-      socket.off(
-        "notification",
-        handleNotification,
-      );
+      socket.off("notification", handleNotification);
     };
   }, []);
 

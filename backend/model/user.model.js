@@ -35,6 +35,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ["available", "away"],
+      default: "available",
+      required: true,
+    },
   },
   {
     timestamps: true,

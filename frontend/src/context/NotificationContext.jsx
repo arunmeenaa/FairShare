@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -11,64 +12,75 @@ import socket from "../services/socket";
 import { useAuth } from "./AuthContext";
 import { useHousehold } from "./HouseholdContext";
 
-const NotificationContext =
-  createContext(null);
+const NotificationContext = createContext(null);
 
-export const NotificationProvider = ({
-  children,
-}) => {
-  const {
-    user,
-    loading: authLoading,
-  } = useAuth();
+export const NotificationProvider = ({ children }) => {
+  const { user, loading: authLoading } = useAuth();
+  const { currentHousehold } = useHousehold();
 
-  const { currentHousehold } =
-    useHousehold();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const [notifications, setNotifications] =
-    useState([]);
+  /* =========================
+     HELPERS
+  ========================= */
 
-  const [unreadCount, setUnreadCount] =
-    useState(0);
+  const getUserId = useCallback(() => {
+    if (!user) return "";
 
-  const [loading, setLoading] =
-    useState(true);
+    return (
+      user._id ||
+      user.id ||
+      user.user?._id ||
+      user.user ||
+      ""
+    ).toString();
+  }, [user]);
 
-  // =========================
-  // FETCH NOTIFICATIONS
-  // =========================
+  const getHouseholdId = useCallback(() => {
+    if (!currentHousehold) return "";
 
-  const fetchNotifications = async () => {
-    if (!user) return;
+    return (
+      currentHousehold._id ||
+      currentHousehold.id ||
+      ""
+    ).toString();
+  }, [currentHousehold]);
+
+  /* =========================
+     FETCH NOTIFICATIONS
+  ========================= */
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
 
       const params = {};
 
-      if (currentHousehold) {
-        params.householdId =
-          currentHousehold._id;
+      const householdId = getHouseholdId();
+
+      if (householdId) {
+        params.householdId = householdId;
       }
 
-      const response = await api.get(
-        "/notifications",
-        {
-          params,
-        },
-      );
+      const response = await api.get("/notifications", {
+        params,
+      });
 
-      setNotifications(
-        response.data.notifications || [],
-      );
-
-      setUnreadCount(
-        response.data.unreadCount || 0,
-      );
+      setNotifications(response.data.notifications || []);
+      setUnreadCount(response.data.unreadCount || 0);
     } catch (error) {
       console.error(
         "Failed to fetch notifications:",
-        error,
+        error
       );
 
       setNotifications([]);
@@ -76,38 +88,168 @@ export const NotificationProvider = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, getHouseholdId]);
 
-  // =========================
-  // AUTH + HOUSEHOLD CHANGE
-  // =========================
+  /* =========================
+     AUTH + HOUSEHOLD CHANGE
+  ========================= */
 
   useEffect(() => {
-    // Auth is still being initialized
     if (authLoading) {
       return;
     }
 
-    // User is logged out
     if (!user) {
       setNotifications([]);
       setUnreadCount(0);
       setLoading(false);
-
       return;
     }
 
-    // User is authenticated
     fetchNotifications();
   }, [
     user,
     authLoading,
     currentHousehold,
+    fetchNotifications,
   ]);
 
-  // =========================
-  // REAL-TIME NOTIFICATIONS
-  // =========================
+  /* =========================
+     SOCKET CONNECTION
+  ========================= */
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+
+    const userId = getUserId();
+
+    if (!userId) {
+      return;
+    }
+
+    const handleConnect = () => {
+      console.log(
+        "Socket connected:",
+        socket.id
+      );
+
+      socket.emit("join-user", userId);
+
+      const householdId = getHouseholdId();
+
+      if (householdId) {
+        socket.emit(
+          "join-household",
+          householdId
+        );
+      }
+    };
+
+    const handleConnectError = (error) => {
+      console.error(
+        "Socket connection error:",
+        error.message
+      );
+    };
+
+    const handleDisconnect = (reason) => {
+      console.log(
+        "Socket disconnected:",
+        reason
+      );
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on(
+      "connect_error",
+      handleConnectError
+    );
+    socket.on(
+      "disconnect",
+      handleDisconnect
+    );
+
+    /*
+     * autoConnect is false in services/socket.js,
+     * so we must explicitly connect.
+     */
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off(
+        "connect_error",
+        handleConnectError
+      );
+      socket.off(
+        "disconnect",
+        handleDisconnect
+      );
+    };
+  }, [
+    authLoading,
+    user,
+    getUserId,
+    getHouseholdId,
+  ]);
+
+  /* =========================
+     HOUSEHOLD ROOM SYNC
+  ========================= */
+
+  useEffect(() => {
+    if (
+      authLoading ||
+      !user ||
+      !currentHousehold
+    ) {
+      return;
+    }
+
+    const householdId = getHouseholdId();
+
+    if (!householdId) {
+      return;
+    }
+
+    /*
+     * If the socket is already connected,
+     * immediately join the new household.
+     *
+     * If it is not connected yet, the connect
+     * handler above will join it after connection.
+     */
+    if (socket.connected) {
+      socket.emit(
+        "join-household",
+        householdId
+      );
+    }
+
+    return () => {
+      if (socket.connected) {
+        socket.emit(
+          "leave-household",
+          householdId
+        );
+      }
+    };
+  }, [
+    authLoading,
+    user,
+    currentHousehold,
+    getHouseholdId,
+  ]);
+
+  /* =========================
+     REAL-TIME NOTIFICATIONS
+  ========================= */
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -115,30 +257,49 @@ export const NotificationProvider = ({
     }
 
     const handleNotification = (
-      notification,
+      notification
     ) => {
       console.log(
-        "New notification:",
-        notification,
+        "New socket notification:",
+        notification
       );
 
-      // Ignore notifications belonging
-      // to another household
+      /*
+       * Support household being either:
+       * - a string/objectId
+       * - a populated object
+       */
+      const notificationHousehold =
+        notification?.household?._id ||
+        notification?.household?.id ||
+        notification?.household ||
+        "";
+
+      const currentHouseholdId =
+        getHouseholdId();
+
+      /*
+       * When a household is selected,
+       * ignore notifications from another household.
+       */
       if (
-        currentHousehold &&
-        notification.household?.toString() !==
-          currentHousehold._id?.toString()
+        currentHouseholdId &&
+        notificationHousehold &&
+        notificationHousehold.toString() !==
+          currentHouseholdId.toString()
       ) {
         return;
       }
 
       setNotifications((prev) => {
-        // Prevent duplicate notification
+        /*
+         * Prevent duplicate notifications.
+         */
         if (
+          notification?._id &&
           prev.some(
             (item) =>
-              item._id ===
-              notification._id,
+              item._id === notification._id
           )
         ) {
           return prev;
@@ -150,40 +311,44 @@ export const NotificationProvider = ({
         ];
       });
 
+      /*
+       * New realtime notifications are unread.
+       */
       setUnreadCount(
-        (prev) => prev + 1,
+        (prev) => prev + 1
       );
     };
 
     socket.on(
       "notification",
-      handleNotification,
+      handleNotification
     );
 
     return () => {
       socket.off(
         "notification",
-        handleNotification,
+        handleNotification
       );
     };
   }, [
-    user,
     authLoading,
+    user,
     currentHousehold,
+    getHouseholdId,
   ]);
 
-  // =========================
-  // MARK ONE AS READ
-  // =========================
+  /* =========================
+     MARK ONE AS READ
+  ========================= */
 
   const markAsRead = async (
-    notificationId,
+    notificationId
   ) => {
     try {
       const notification =
         notifications.find(
           (item) =>
-            item._id === notificationId,
+            item._id === notificationId
         );
 
       if (
@@ -194,7 +359,7 @@ export const NotificationProvider = ({
       }
 
       await api.patch(
-        `/notifications/${notificationId}/read`,
+        `/notifications/${notificationId}/read`
       );
 
       setNotifications((prev) =>
@@ -205,28 +370,30 @@ export const NotificationProvider = ({
                 isRead: true,
                 readAt: new Date(),
               }
-            : item,
-        ),
+            : item
+        )
       );
 
-      setUnreadCount(
-        (prev) =>
-          Math.max(prev - 1, 0),
+      setUnreadCount((prev) =>
+        Math.max(prev - 1, 0)
       );
     } catch (error) {
       console.error(
         "Failed to mark notification as read:",
-        error,
+        error
       );
     }
   };
 
-  // =========================
-  // MARK ALL AS READ
-  // =========================
+  /* =========================
+     MARK ALL AS READ
+  ========================= */
 
   const markAllAsRead = async () => {
-    if (!currentHousehold) {
+    const householdId =
+      getHouseholdId();
+
+    if (!householdId) {
       return;
     }
 
@@ -234,9 +401,8 @@ export const NotificationProvider = ({
       await api.patch(
         "/notifications/read-all",
         {
-          householdId:
-            currentHousehold._id,
-        },
+          householdId,
+        }
       );
 
       setNotifications((prev) =>
@@ -246,14 +412,14 @@ export const NotificationProvider = ({
           readAt:
             notification.readAt ||
             new Date(),
-        })),
+        }))
       );
 
       setUnreadCount(0);
     } catch (error) {
       console.error(
         "Failed to mark all notifications as read:",
-        error,
+        error
       );
     }
   };

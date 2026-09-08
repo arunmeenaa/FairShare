@@ -35,6 +35,7 @@ const getInitial = (name) => {
 
 const getId = (target) => {
   if (!target) return "";
+
   if (typeof target === "object") {
     return (
       target._id ||
@@ -44,6 +45,7 @@ const getId = (target) => {
       ""
     ).toString();
   }
+
   return target.toString();
 };
 
@@ -86,11 +88,17 @@ const ExpenseDetail = () => {
       setLoading(true);
       setError("");
 
-      const response = await api.get(`/expenses/${householdId}/${expenseId}`);
+      const response = await api.get(
+        `/expenses/${householdId}/${expenseId}`,
+      );
+
       setExpense(response.data.expense);
     } catch (err) {
       console.error("Failed to load expense:", err);
-      setError(err.response?.data?.message || "Failed to load expense");
+
+      setError(
+        err.response?.data?.message || "Failed to load expense",
+      );
     } finally {
       setLoading(false);
     }
@@ -144,38 +152,45 @@ const ExpenseDetail = () => {
   const allMembers = useMemo(() => {
     if (!expense) return [];
 
-    const participants = (expense.participants || []).map((participant) => ({
-      user: participant.user,
-      share: participant.share,
-      type: "participant",
-      availabilityStatus: participant.availabilityStatus,
-    }));
+    const participants = (expense.participants || []).map(
+      (participant) => ({
+        user: participant.user,
+        share: participant.share,
+        type: "participant",
+        availabilityStatus: participant.availabilityStatus,
+      }),
+    );
 
-    const excluded = (expense.excludedMembers || []).map((member) => ({
-      user: member.user,
-      share: 0,
-      type: "excluded",
-      availabilityStatus: member.status,
-      reason: member.reason,
-    }));
+    const excluded = (expense.excludedMembers || []).map(
+      (member) => ({
+        user: member.user,
+        share: 0,
+        type: "excluded",
+        availabilityStatus: member.status,
+        reason: member.reason,
+      }),
+    );
 
     return [...participants, ...excluded];
   }, [expense]);
 
   /* ================= LOADING ================= */
+
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 transition-colors duration-300 sm:px-6 lg:px-8 dark:bg-slate-950">
         <div className="mx-auto max-w-4xl animate-pulse space-y-6">
-          <div className="h-6 w-32 rounded-lg bg-slate-200" />
-          <div className="h-10 w-64 rounded-lg bg-slate-200" />
+          <div className="h-6 w-32 rounded-lg bg-slate-200 dark:bg-slate-800" />
 
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
-            <div className="h-44 bg-slate-200" />
+          <div className="h-10 w-64 rounded-lg bg-slate-200 dark:bg-slate-800" />
+
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="h-44 bg-slate-200 dark:bg-slate-800" />
+
             <div className="space-y-4 p-6 sm:p-8">
-              <div className="h-16 rounded-2xl bg-slate-100" />
-              <div className="h-16 rounded-2xl bg-slate-100" />
-              <div className="h-32 rounded-2xl bg-slate-100" />
+              <div className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800" />
+              <div className="h-16 rounded-2xl bg-slate-100 dark:bg-slate-800" />
+              <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800" />
             </div>
           </div>
         </div>
@@ -184,14 +199,15 @@ const ExpenseDetail = () => {
   }
 
   /* ================= ERROR ================= */
+
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 sm:px-6">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 transition-colors duration-300 sm:px-6 dark:bg-slate-950">
         <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
-          <div className="w-full rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
+          <div className="w-full rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm dark:border-red-500/20 dark:bg-slate-900 dark:shadow-black/20">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-500/10">
               <svg
-                className="h-7 w-7 text-red-500"
+                className="h-7 w-7 text-red-500 dark:text-red-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -204,75 +220,19 @@ const ExpenseDetail = () => {
                 />
               </svg>
             </div>
-            <h2 className="mt-5 text-lg font-semibold text-slate-900">
+
+            <h2 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">
               Unable to load expense
             </h2>
-            <p className="mt-2 text-sm leading-6 text-red-600">{error}</p>
+
+            <p className="mt-2 text-sm leading-6 text-red-600 dark:text-red-400">
+              {error}
+            </p>
+
             <button
               type="button"
               onClick={() => navigate("/expenses")}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              Back to Expenses
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ================= NOT FOUND ================= */
-  if (!expense) {
-    return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 sm:px-6">
-        <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
-          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-              <svg
-                className="h-7 w-7 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.8}
-                  d="M9 14l2 2 4-4m5 3V7a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h13a2 2 0 002-2z"
-                />
-              </svg>
-            </div>
-            <h2 className="mt-5 text-lg font-semibold text-slate-900">
-              Expense not found
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              This expense may have been deleted or is no longer available.
-            </p>
-            <Link
-              to="/expenses"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-            >
-              Back to Expenses
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const paidByName = expense.paidBy?.name || "Unknown Member";
-  const payerId = getId(expense.paidBy);
-  const categoryIcon = CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
-
-  return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
-        {/* ================= TOP NAVIGATION BAR ================= */}
-        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <Link
-              to="/expenses"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
             >
               <svg
                 className="h-4 w-4"
@@ -287,9 +247,108 @@ const ExpenseDetail = () => {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
+
+              Back to Expenses
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= NOT FOUND ================= */
+
+  if (!expense) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 transition-colors duration-300 sm:px-6 dark:bg-slate-950">
+        <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+              <svg
+                className="h-7 w-7 text-slate-400 dark:text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M9 14l2 2 4-4m5 3V7a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h13a2 2 0 002-2z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="mt-5 text-lg font-semibold text-slate-900 dark:text-white">
+              Expense not found
+            </h2>
+
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              This expense may have been deleted or is no longer
+              available.
+            </p>
+
+            <Link
+              to="/expenses"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+
+              Back to Expenses
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const paidByName = expense.paidBy?.name || "Unknown Member";
+  const payerId = getId(expense.paidBy);
+
+  const categoryIcon =
+    CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
+
+  return (
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 pb-28 transition-colors duration-300 sm:px-6 lg:px-8 lg:pb-8 dark:bg-slate-950">
+      <div className="mx-auto max-w-4xl">
+        {/* ================= TOP NAVIGATION BAR ================= */}
+
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <Link
+              to="/expenses"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+
               Back to expenses
             </Link>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Expense details
             </h1>
           </div>
@@ -298,7 +357,7 @@ const ExpenseDetail = () => {
             type="button"
             disabled={downloading}
             onClick={downloadReceipt}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:shadow-black/20 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
           >
             {downloading ? (
               <>
@@ -315,18 +374,20 @@ const ExpenseDetail = () => {
                     stroke="currentColor"
                     strokeWidth="3"
                   />
+
                   <path
                     className="opacity-75"
                     fill="currentColor"
                     d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
                   />
                 </svg>
+
                 Downloading...
               </>
             ) : (
               <>
                 <svg
-                  className="h-4 w-4 text-slate-500"
+                  className="h-4 w-4 text-slate-500 dark:text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -338,6 +399,7 @@ const ExpenseDetail = () => {
                     d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
                   />
                 </svg>
+
                 Download Receipt
               </>
             )}
@@ -345,20 +407,28 @@ const ExpenseDetail = () => {
         </div>
 
         {/* ================= MAIN CARD CONTAINER ================= */}
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
           {/* Header Banner */}
-          <div className="bg-indigo-600 px-6 py-8 sm:px-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl ring-1 ring-white/20">
+
+          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 px-6 py-8 sm:px-8">
+            {/* Decorative glow */}
+            <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+
+            <div className="pointer-events-none absolute -bottom-24 -left-20 h-52 w-52 rounded-full bg-violet-300/10 blur-3xl" />
+
+            <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-2xl shadow-inner shadow-white/5 ring-1 ring-white/10">
                   {categoryIcon}
                 </div>
 
-                <div>
-                  <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-indigo-100 ring-1 ring-white/10">
+                <div className="min-w-0">
+                  <span className="inline-flex rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-indigo-100 backdrop-blur-sm">
                     {getCategoryName(expense.category)}
                   </span>
-                  <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+
+                  <h2 className="mt-2 truncate text-2xl font-bold text-white sm:text-3xl">
                     {expense.description}
                   </h2>
                 </div>
@@ -368,6 +438,7 @@ const ExpenseDetail = () => {
                 <p className="text-sm font-medium text-indigo-200">
                   Total amount
                 </p>
+
                 <p className="mt-1 text-3xl font-bold text-white">
                   {formatCurrency(expense.amount)}
                 </p>
@@ -376,11 +447,12 @@ const ExpenseDetail = () => {
           </div>
 
           {/* Metadata Grid */}
-          <div className="grid border-b border-slate-100 sm:grid-cols-2">
+
+          <div className="grid border-b border-slate-100 dark:border-slate-800 sm:grid-cols-2">
             <div className="flex items-center gap-4 p-6">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
                 <svg
-                  className="h-5 w-5 text-blue-600"
+                  className="h-5 w-5 text-blue-600 dark:text-blue-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -393,20 +465,22 @@ const ExpenseDetail = () => {
                   />
                 </svg>
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Paid by
                 </p>
-                <p className="mt-0.5 font-semibold text-slate-900">
+
+                <p className="mt-0.5 truncate font-semibold text-slate-900 dark:text-slate-100">
                   {paidByName}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 border-t border-slate-100 p-6 sm:border-l sm:border-t-0">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50">
+            <div className="flex items-center gap-4 border-t border-slate-100 p-6 dark:border-slate-800 sm:border-l sm:border-t-0">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-500/10">
                 <svg
-                  className="h-5 w-5 text-violet-600"
+                  className="h-5 w-5 text-violet-600 dark:text-violet-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -419,11 +493,13 @@ const ExpenseDetail = () => {
                   />
                 </svg>
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Expense date
                 </p>
-                <p className="mt-0.5 font-semibold text-slate-900">
+
+                <p className="mt-0.5 truncate font-semibold text-slate-900 dark:text-slate-100">
                   {formatDate(expense.date)}
                 </p>
               </div>
@@ -431,80 +507,90 @@ const ExpenseDetail = () => {
           </div>
 
           {/* Participant Breakdown Section */}
+
           <div className="p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   Expense split
                 </h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Breakdown of shares and away members for this transaction.
+
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                  Breakdown of shares and away members for this
+                  transaction.
                 </p>
               </div>
 
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 {expense.participants?.length || 0} participants
               </span>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-              <div className="hidden grid-cols-[1fr_auto] border-b border-slate-100 bg-slate-50 px-5 py-3 sm:grid">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {/* Members table */}
+
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="hidden grid-cols-[1fr_auto] border-b border-slate-100 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-slate-800/60 sm:grid">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Member
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Share
                 </span>
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {allMembers.map((member) => {
                   const name = member.user?.name || "Unknown Member";
                   const memberUserId = getId(member.user);
+
                   const isPayer =
-                    member.type === "participant" && memberUserId === payerId;
+                    member.type === "participant" &&
+                    memberUserId === payerId;
 
                   return (
                     <div
                       key={`${member.type}-${memberUserId}`}
-                      className={`flex items-center justify-between gap-4 px-5 py-4 transition ${
+                      className={`flex items-center justify-between gap-4 px-5 py-4 transition-colors ${
                         member.type === "excluded"
-                          ? "bg-amber-50/40 hover:bg-amber-50/70"
-                          : "hover:bg-slate-50"
+                          ? "bg-amber-50/40 hover:bg-amber-50/70 dark:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.08]"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                             member.type === "excluded"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-indigo-100 text-indigo-700"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"
+                              : "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
                           }`}
                         >
                           {getInitial(name)}
                         </div>
 
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-slate-900">
+                          <p className="truncate font-medium text-slate-900 dark:text-slate-100">
                             {name}
                           </p>
 
                           <div className="mt-1 flex flex-wrap items-center gap-2">
                             {isPayer && (
-                              <span className="text-xs font-semibold text-blue-600">
+                              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                                 Paid this expense
                               </span>
                             )}
 
-                            {member.type === "participant" && !isPayer && (
-                              <span className="text-xs text-slate-400">
-                                Participant
-                              </span>
-                            )}
+                            {member.type === "participant" &&
+                              !isPayer && (
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                  Participant
+                                </span>
+                              )}
 
                             {member.type === "excluded" && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-400" />
+
                                 {member.availabilityStatus === "away"
                                   ? "Away · Not included"
                                   : "Not included"}
@@ -512,20 +598,21 @@ const ExpenseDetail = () => {
                             )}
                           </div>
 
-                          {member.type === "excluded" && member.reason && (
-                            <p className="mt-1 text-xs text-amber-900/80">
-                              Reason: {member.reason}
-                            </p>
-                          )}
+                          {member.type === "excluded" &&
+                            member.reason && (
+                              <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-300/80">
+                                Reason: {member.reason}
+                              </p>
+                            )}
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p
                           className={`font-bold ${
                             member.type === "excluded"
-                              ? "text-slate-400"
-                              : "text-slate-900"
+                              ? "text-slate-400 dark:text-slate-500"
+                              : "text-slate-900 dark:text-slate-100"
                           }`}
                         >
                           {formatCurrency(member.share)}
@@ -538,11 +625,13 @@ const ExpenseDetail = () => {
             </div>
 
             {/* Total Balance Card */}
-            <div className="mt-5 flex items-center justify-between rounded-2xl bg-slate-50 px-5 py-4">
-              <span className="text-sm font-medium text-slate-500">
+
+            <div className="mt-5 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/60">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Total transaction
               </span>
-              <span className="text-lg font-bold text-slate-900">
+
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
                 {formatCurrency(expense.amount)}
               </span>
             </div>
@@ -550,23 +639,26 @@ const ExpenseDetail = () => {
         </div>
 
         {/* Footer info note */}
+
         <div className="mt-4 flex items-start gap-2.5 px-2">
           <svg
-            className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
+            className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+
             <path
               strokeLinecap="round"
               strokeWidth={1.8}
               d="M12 11v5M12 8h.01"
             />
           </svg>
-          <p className="text-xs leading-5 text-slate-400">
-            This expense is calculated and settled using FairShare's automated
-            split engine.
+
+          <p className="text-xs leading-5 text-slate-400 dark:text-slate-500">
+            This expense is calculated and settled using FairShare's
+            automated split engine.
           </p>
         </div>
       </div>

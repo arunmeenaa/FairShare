@@ -285,39 +285,44 @@ const getHouseholdMembers = async (req, res) => {
 
     const isAdmin = currentMember?.role === "admin";
 
-    const activeMembers = household.members.filter((member) => member.isActive);
+    const activeMembers = household.members.filter(
+      (member) => member.isActive,
+    );
 
-    // Get availability for all active members
+    // Get availability for all active household members
+    const userIds = activeMembers.map((member) => member.user._id);
+
     const availabilityRecords = await Availability.find({
       household: householdId,
-      user: {
-        $in: activeMembers.map((member) => member.user._id),
-      },
-    });
+      user: { $in: userIds },
+    }).lean();
 
     const availabilityMap = new Map(
       availabilityRecords.map((record) => [
         record.user.toString(),
-        record.status,
+        {
+          status: record.status || "unavailable",
+          reason: record.reason || "",
+        },
       ]),
     );
 
-    // Add REAL availability status
-    const membersWithAvailability = activeMembers.map((member) => ({
-      _id: member._id,
-      user: member.user,
-      role: member.role,
-      joinedAt: member.joinedAt,
-      isActive: member.isActive,
+    const membersWithAvailability = activeMembers.map((member) => {
+      const availability = availabilityMap.get(member.user._id.toString());
 
-      availabilityStatus:
-        availabilityMap.get(member.user._id.toString()) || null,
+      return {
+        _id: member._id,
+        user: member.user,
+        role: member.role,
+        joinedAt: member.joinedAt,
+        isActive: member.isActive,
+        groceryParticipant: member.groceryParticipant ?? true,
 
-      // Only admins receive this field
-      ...(isAdmin && {
-        groceryParticipant: member.groceryParticipant,
-      }),
-    }));
+        // IMPORTANT
+        availabilityStatus: availability?.status || "available",
+        availabilityReason: availability?.reason || "",
+      };
+    });
 
     return res.status(200).json({
       members: membersWithAvailability,

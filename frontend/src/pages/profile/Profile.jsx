@@ -147,12 +147,12 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl space-y-6">
 
         {/* Header */}
         <div>
-          <p className="text-sm font-semibold text-indigo-600">Account</p>
+          <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Account</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
             Profile
           </h1>
@@ -162,7 +162,7 @@ const Profile = () => {
         </div>
 
         {/* Profile Card */}
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           {/* Header Banner */}
           <div className="bg-indigo-600 px-6 py-7 sm:px-8">
             <div className="flex items-center gap-4">
@@ -192,7 +192,7 @@ const Profile = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 sm:p-8">
             <div className="mb-6">
-              <h2 className="text-lg font-bold text-slate-900">Personal information</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Personal information</h2>
               <p className="mt-0.5 text-sm text-slate-500">
                 Keep your profile and contact details up to date.
               </p>
@@ -226,7 +226,7 @@ const Profile = () => {
                     onChange={(e) => setName(e.target.value)}
                     required
                     placeholder="Your full name"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-950/50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ const Profile = () => {
                     type="email"
                     value={user?.email || ""}
                     disabled
-                    className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3 pl-11 pr-11 text-sm text-slate-500"
+                    className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3 pl-11 pr-11 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                   />
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,18 +300,18 @@ const Profile = () => {
                     placeholder="e.g. 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-950/50 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
             </div>
 
             {/* Save Button */}
-            <div className="mt-7 flex justify-end border-t border-slate-100 pt-6">
+            <div className="mt-7 flex justify-end border-t border-slate-100 dark:border-slate-800 pt-6 dark:border-slate-800">
               <button
                 type="submit"
                 disabled={loading || !hasChanges}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 dark:bg-slate-800 dark:disabled:bg-slate-800 sm:w-auto"
               >
                 {loading ? (
                   <>
@@ -336,9 +336,9 @@ const Profile = () => {
 
         {/* Current Household Info */}
         {currentHousehold && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -352,7 +352,7 @@ const Profile = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-bold text-slate-900">{currentHousehold.name}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{currentHousehold.name}</p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {currentHousehold.members?.filter((m) => m.isActive).length || 0} active members
                     </p>
@@ -361,8 +361,8 @@ const Profile = () => {
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       isAdmin
-                        ? "bg-indigo-50 text-indigo-700"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     }`}
                   >
                     {isAdmin ? "ADMIN" : "MEMBER"}
@@ -372,8 +372,8 @@ const Profile = () => {
             </div>
 
             {isAdmin && (
-              <div className="mt-4 rounded-xl bg-indigo-50/80 px-4 py-3">
-                <p className="text-xs leading-5 text-indigo-700">
+              <div className="mt-4 rounded-xl bg-indigo-50/80 px-4 py-3 dark:bg-indigo-950/40">
+                <p className="text-xs leading-5 text-indigo-700 dark:text-indigo-300">
                   You are the administrator of this household. Household invitations and member management settings are accessible under the Members page.
                 </p>
               </div>
@@ -382,10 +382,10 @@ const Profile = () => {
         )}
 
         {/* Account Security Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <div className="flex items-center justify-between gap-4 p-5">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:bg-slate-800 dark:text-slate-300">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -397,7 +397,7 @@ const Profile = () => {
               </div>
 
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Account security</h2>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Account security</h2>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500">
                   Change your password to keep your FairShare account secure.
                 </p>
@@ -416,7 +416,7 @@ const Profile = () => {
           {showPasswordForm && (
             <form
               onSubmit={handlePasswordSubmit}
-              className="border-t border-slate-100 p-5"
+              className="border-t border-slate-100 dark:border-slate-800 p-5 dark:border-slate-800"
             >
               <div className="space-y-4">
                 <div>
@@ -432,7 +432,7 @@ const Profile = () => {
                     autoComplete="current-password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2.5 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-950/50"
                   />
                 </div>
 
@@ -449,9 +449,9 @@ const Profile = () => {
                     autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2.5 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-950/50"
                   />
-                  <p className="mt-1 text-xs text-slate-400">Minimum 6 characters.</p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Minimum 6 characters.</p>
                 </div>
 
                 <div>
@@ -467,7 +467,7 @@ const Profile = () => {
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 px-3.5 py-2.5 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-950/50"
                   />
                 </div>
               </div>

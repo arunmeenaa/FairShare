@@ -14,7 +14,10 @@ const FEATURES = [
 const Register = () => {
   const navigate = useNavigate();
   const { getCurrentUser } = useAuth();
-  const { fetchHouseholds } = useHousehold();
+  const {
+  fetchHouseholds,
+  selectHousehold,
+} = useHousehold();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -46,67 +49,94 @@ const Register = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const name = formData.name.trim();
-    const email = formData.email.trim();
-    const password = formData.password;
-    const householdName = formData.householdName.trim();
-    const inviteCode = formData.inviteCode.trim().toUpperCase();
+  const name = formData.name.trim();
+  const email = formData.email.trim();
+  const password = formData.password;
+  const householdName = formData.householdName.trim();
+  const inviteCode = formData.inviteCode.trim().toUpperCase();
 
-    if (!name) {
-      toast.error("Please enter your full name");
-      return;
-    }
+  if (!name) {
+    toast.error("Please enter your full name");
+    return;
+  }
 
-    if (!email) {
-      toast.error("Please enter your email address");
-      return;
-    }
+  if (!email) {
+    toast.error("Please enter your email address");
+    return;
+  }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
-      return;
-    }
+  if (password.length < 6) {
+    toast.error("Password must be at least 6 characters long");
+    return;
+  }
 
-    if (formData.householdMode === "create" && !householdName) {
-      toast.error("Please enter a household name");
-      return;
-    }
+  if (formData.householdMode === "create" && !householdName) {
+    toast.error("Please enter a household name");
+    return;
+  }
 
-    if (formData.householdMode === "join" && !inviteCode) {
-      toast.error("Please enter the invitation code");
-      return;
-    }
+  if (formData.householdMode === "join" && !inviteCode) {
+    toast.error("Please enter the invitation code");
+    return;
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const payload = {
-        name,
-        email,
-        password,
-        householdMode: formData.householdMode,
-        ...(formData.householdMode === "create" && { householdName }),
-        ...(formData.householdMode === "join" && { inviteCode }),
-      };
+    const payload = {
+      name,
+      email,
+      password,
+      householdMode: formData.householdMode,
+      ...(formData.householdMode === "create" && {
+        householdName,
+      }),
+      ...(formData.householdMode === "join" && {
+        inviteCode,
+      }),
+    };
 
-      await api.post("/auth/register", payload);
+    // Keep the response
+    const response = await api.post("/auth/register", payload);
 
-      await getCurrentUser();
+    // Refresh authenticated user
+    await getCurrentUser();
+
+    // Backend should return the household that was
+    // created or joined.
+    const createdHousehold = response.data?.household;
+
+    if (createdHousehold?._id) {
+      // Immediately select it
+      selectHousehold(createdHousehold);
+
+      // Also refresh the household list
       await fetchHouseholds();
-
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
-    } catch (err) {
-      console.error("Registration failed:", err);
-      toast.error(
-        err.response?.data?.message || "Registration failed. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    } else {
+      // Fallback for older backend response
+      await fetchHouseholds();
     }
-  };
+
+    toast.success(
+      formData.householdMode === "join"
+        ? "Account created and household joined!"
+        : "Account and household created successfully!"
+    );
+
+    navigate("/dashboard");
+  } catch (err) {
+    console.error("Registration failed:", err);
+
+    toast.error(
+      err.response?.data?.message ||
+        "Registration failed. Please try again."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-50">

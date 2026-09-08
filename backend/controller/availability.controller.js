@@ -24,10 +24,23 @@ const getAvailability = async (req, res) => {
       });
     }
 
-    const availability = await Availability.findOne({
-      household: householdId,
-      user: req.user._id,
-    });
+    const availability = await Availability.findOneAndUpdate(
+      {
+        user: req.user._id,
+        household: householdId,
+      },
+      {
+        $setOnInsert: {
+          status: "available",
+          reason: "",
+        },
+      },
+      {
+        upsert: true,
+        returnDocument: "after",
+        setDefaultsOnInsert: true,
+      },
+    );
 
     res.status(200).json({
       availability: availability || {

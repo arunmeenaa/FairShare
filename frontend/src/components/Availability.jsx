@@ -9,7 +9,7 @@ const Availability = () => {
 
   const [status, setStatus] = useState("available");
   const [loading, setLoading] = useState(true);
-  const [targetStatus, setTargetStatus] = useState(null); // Tracks which specific button is saving
+  const [targetStatus, setTargetStatus] = useState(null);
 
   const householdId = currentHousehold?._id;
 
@@ -63,12 +63,12 @@ const Availability = () => {
   /* ================= NO HOUSEHOLD ================= */
   if (!currentHousehold) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 sm:px-6">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 pb-28 transition-colors duration-300 sm:px-6 sm:pb-28 dark:bg-slate-950">
         <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center">
-          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10 dark:border-white/5 dark:bg-slate-900/80 dark:shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
               <svg
-                className="h-8 w-8 text-indigo-600"
+                className="h-8 w-8 text-indigo-600 dark:text-indigo-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -82,18 +82,18 @@ const Availability = () => {
               </svg>
             </div>
 
-            <h2 className="mt-6 text-2xl font-bold text-slate-900">
+            <h2 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">
               No household selected
             </h2>
 
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500 dark:text-slate-400">
               Select or join a household to configure your split status and away preferences.
             </p>
 
             <div className="mt-8 flex justify-center">
               <Link
                 to="/households"
-                className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:hover:bg-indigo-500"
               >
                 Go to Households
               </Link>
@@ -107,18 +107,18 @@ const Availability = () => {
   /* ================= LOADING SKELETON ================= */
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-8 pb-28 transition-colors duration-300 sm:px-6 sm:pb-28 lg:px-8 lg:pb-8 dark:bg-slate-950">
         <div className="mx-auto max-w-2xl animate-pulse space-y-6">
           <div className="space-y-2">
-            <div className="h-4 w-32 rounded bg-slate-200" />
-            <div className="h-9 w-48 rounded-lg bg-slate-200" />
+            <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800/80" />
+            <div className="h-9 w-48 rounded-lg bg-slate-200 dark:bg-slate-800/80" />
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
-            <div className="h-28 rounded-2xl bg-slate-100" />
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-white/5 dark:bg-slate-900">
+            <div className="h-28 rounded-2xl bg-slate-100 dark:bg-slate-800/50" />
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <div className="h-32 rounded-2xl bg-slate-100" />
-              <div className="h-32 rounded-2xl bg-slate-100" />
+              <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800/50" />
+              <div className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800/50" />
             </div>
           </div>
         </div>
@@ -127,31 +127,31 @@ const Availability = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 pb-28 transition-colors duration-300 sm:px-6 sm:pb-28 lg:px-8 lg:pb-8 dark:bg-slate-950">
       <div className="mx-auto max-w-2xl space-y-6">
 
         {/* ================= HEADER ================= */}
         <div>
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
             {currentHousehold.name}
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             Availability status
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Let roommates know if you're home or away to automate fair expense exclusions.
           </p>
         </div>
 
         {/* ================= STATUS HERO CARD ================= */}
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-white/5 dark:bg-slate-900 dark:shadow-xl">
           
           {/* Status Banner */}
           <div
             className={`border-b px-6 py-7 transition-colors sm:px-8 ${
               isAvailable
-                ? "border-emerald-100 bg-emerald-50/60"
-                : "border-amber-100 bg-amber-50/60"
+                ? "border-emerald-100 bg-emerald-50/60 dark:border-emerald-500/20 dark:bg-emerald-500/10"
+                : "border-amber-100 bg-amber-50/60 dark:border-amber-500/20 dark:bg-amber-500/10"
             }`}
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -159,26 +159,28 @@ const Availability = () => {
                 <div
                   className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 transition-all ${
                     isAvailable
-                      ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
-                      : "bg-amber-100 text-amber-700 ring-amber-200"
+                      ? "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:ring-emerald-500/30"
+                      : "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:ring-amber-500/30"
                   }`}
                 >
                   <span
                     className={`h-4 w-4 rounded-full transition-all ${
                       isAvailable
-                        ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.2)]"
-                        : "bg-amber-500 shadow-[0_0_0_5px_rgba(245,158,11,0.2)]"
+                        ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,0.2)] dark:bg-emerald-400 dark:shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                        : "bg-amber-500 shadow-[0_0_0_5px_rgba(245,158,11,0.2)] dark:bg-amber-400 dark:shadow-[0_0_12px_rgba(251,191,36,0.8)]"
                     }`}
                   />
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Your current status
                   </p>
                   <h2
                     className={`mt-0.5 text-2xl font-bold ${
-                      isAvailable ? "text-emerald-900" : "text-amber-950"
+                      isAvailable
+                        ? "text-emerald-900 dark:text-emerald-300"
+                        : "text-amber-950 dark:text-amber-300"
                     }`}
                   >
                     {isAvailable ? "Available" : "Away"}
@@ -189,13 +191,13 @@ const Availability = () => {
               <span
                 className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                   isAvailable
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
+                    : "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
                 }`}
               >
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
-                    isAvailable ? "bg-emerald-600" : "bg-amber-600"
+                    isAvailable ? "bg-emerald-600 dark:bg-emerald-400" : "bg-amber-600 dark:bg-amber-400"
                   }`}
                 />
                 {isAvailable ? "Included in splits" : "Excluded from daily splits"}
@@ -205,7 +207,7 @@ const Availability = () => {
 
           {/* Status Selection Cards */}
           <div className="p-6 sm:p-8">
-            <label className="mb-3 block text-sm font-semibold text-slate-700">
+            <label className="mb-3 block text-sm font-semibold text-slate-700 dark:text-slate-300">
               Select your status
             </label>
 
@@ -218,31 +220,22 @@ const Availability = () => {
                 onClick={() => changeStatus("available")}
                 className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
                   isAvailable
-                    ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:shadow-[0_0_20px_rgba(16,185,129,0.05)]"
+                    : "border-slate-200 bg-white hover:border-slate-700 hover:bg-slate-50 dark:border-white/5 dark:bg-slate-900 dark:hover:border-white/10 dark:hover:bg-slate-800"
                 } ${targetStatus !== null ? "cursor-not-allowed opacity-75" : ""}`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    isAvailable ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  }`}>
                     {targetStatus === "available" ? (
                       <svg
-                        className="h-5 w-5 animate-spin text-emerald-700"
+                        className="h-5 w-5 animate-spin text-emerald-700 dark:text-emerald-400"
                         fill="none"
                         viewBox="0 0 24 24"
                       >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
-                        />
+                        <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                       </svg>
                     ) : (
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,19 +245,19 @@ const Availability = () => {
                   </div>
 
                   {targetStatus === "available" ? (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
                       SAVING...
                     </span>
                   ) : isAvailable ? (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="font-bold text-slate-900">Available</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100">Available</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     You are residing at home and will share all daily household and grocery costs.
                   </p>
                 </div>
@@ -277,31 +270,22 @@ const Availability = () => {
                 onClick={() => changeStatus("away")}
                 className={`relative flex flex-col justify-between rounded-2xl border p-5 text-left transition-all ${
                   !isAvailable
-                    ? "border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    ? "border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20 dark:border-amber-500/40 dark:bg-amber-500/10 dark:shadow-[0_0_20px_rgba(245,158,11,0.05)]"
+                    : "border-slate-200 bg-white hover:border-slate-700 hover:bg-slate-50 dark:border-white/5 dark:bg-slate-900 dark:hover:border-white/10 dark:hover:bg-slate-800"
                 } ${targetStatus !== null ? "cursor-not-allowed opacity-75" : ""}`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    !isAvailable ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  }`}>
                     {targetStatus === "away" ? (
                       <svg
-                        className="h-5 w-5 animate-spin text-amber-700"
+                        className="h-5 w-5 animate-spin text-amber-700 dark:text-amber-400"
                         fill="none"
                         viewBox="0 0 24 24"
                       >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
-                        />
+                        <circle className="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                       </svg>
                     ) : (
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,19 +295,19 @@ const Availability = () => {
                   </div>
 
                   {targetStatus === "away" ? (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
                       SAVING...
                     </span>
                   ) : !isAvailable ? (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800">
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
                       ACTIVE
                     </span>
                   ) : null}
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="font-bold text-slate-900">Away</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100">Away</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                     You are out of town. Automatic expenses will mark you as excluded while away.
                   </p>
                 </div>
@@ -331,18 +315,18 @@ const Availability = () => {
             </div>
 
             {/* Explanation Note */}
-            <div className="mt-6 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+            <div className="mt-6 flex items-start gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
                   <path strokeLinecap="round" strokeWidth={1.8} d="M12 11v5M12 8h.01" />
                 </svg>
               </div>
               <div>
-                <p className="text-xs font-semibold text-indigo-950">
+                <p className="text-xs font-semibold text-indigo-950 dark:text-indigo-300">
                   How does FairShare use this?
                 </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-indigo-900/80">
+                <p className="mt-0.5 text-xs leading-relaxed text-indigo-900/80 dark:text-indigo-200/70">
                   When members record new expenses under automatic split mode, FairShare checks your availability at that moment and automatically excludes you if you are marked as away.
                 </p>
               </div>
@@ -351,7 +335,7 @@ const Availability = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400">
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500">
           Status updates take effect instantly across all upcoming household expense splits.
         </p>
 

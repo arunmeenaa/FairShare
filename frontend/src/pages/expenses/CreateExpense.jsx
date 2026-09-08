@@ -215,10 +215,10 @@ const CreateExpense = () => {
 
   if (!currentHousehold) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
-          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/50">
               <svg
                 className="h-8 w-8 text-indigo-600"
                 fill="none"
@@ -233,10 +233,10 @@ const CreateExpense = () => {
                 />
               </svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold text-slate-900">
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">
               Select a household
             </h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
+            <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
               Select a household before creating an expense.
             </p>
           </div>
@@ -246,13 +246,13 @@ const CreateExpense = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 pb-28 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
         {/* ================= HEADER & BREADCRUMB ================= */}
         <div className="mb-6">
           <Link
             to="/expenses"
-            className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600"
+            className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400"
           >
             <svg
               className="h-4 w-4"
@@ -269,21 +269,21 @@ const CreateExpense = () => {
             </svg>
             Back to Expenses
           </Link>
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
             {currentHousehold.name}
           </p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             Add Expense
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Record and split a new household expense.
           </p>
         </div>
 
         {/* ================= ERROR BANNER ================= */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40">
               <svg
                 className="h-4 w-4 text-red-600"
                 fill="none"
@@ -299,16 +299,16 @@ const CreateExpense = () => {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-red-800">
+              <p className="text-sm font-semibold text-red-800 dark:text-red-300">
                 Something went wrong
               </p>
-              <p className="mt-0.5 text-sm text-red-600">{error}</p>
+              <p className="mt-0.5 text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           </div>
         )}
 
         {/* ================= ADD EXPENSE FORM ================= */}
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="bg-indigo-600 p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
@@ -340,7 +340,7 @@ const CreateExpense = () => {
             <div>
               <label
                 htmlFor="description"
-                className="mb-2 block text-sm font-semibold text-slate-700"
+                className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
               >
                 Description
               </label>
@@ -352,7 +352,7 @@ const CreateExpense = () => {
                 onChange={handleChange}
                 placeholder="e.g. Monthly groceries"
                 required
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-950/50"
               />
             </div>
 
@@ -360,7 +360,7 @@ const CreateExpense = () => {
             <div>
               <label
                 htmlFor="amount"
-                className="mb-2 block text-sm font-semibold text-slate-700"
+                className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
               >
                 Amount
               </label>
@@ -378,7 +378,7 @@ const CreateExpense = () => {
                   step="0.01"
                   placeholder="0.00"
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-950/50"
                 />
               </div>
             </div>
@@ -388,7 +388,7 @@ const CreateExpense = () => {
               <div>
                 <label
                   htmlFor="category"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                 >
                   Category
                 </label>
@@ -397,7 +397,7 @@ const CreateExpense = () => {
                   name="category"
                   value={form.category}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-950/50"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
@@ -410,7 +410,7 @@ const CreateExpense = () => {
               <div>
                 <label
                   htmlFor="date"
-                  className="mb-2 block text-sm font-semibold text-slate-700"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                 >
                   Date
                 </label>
@@ -421,17 +421,17 @@ const CreateExpense = () => {
                   value={form.date}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-950/50"
                 />
               </div>
             </div>
 
             {/* Split Mode Selector */}
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Split method
               </label>
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
                 <button
                   type="button"
                   onClick={() =>
@@ -442,8 +442,8 @@ const CreateExpense = () => {
                   }
                   className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                     form.participantMode === "automatic"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-indigo-300"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
                   Automatic (All Active)
@@ -465,8 +465,8 @@ const CreateExpense = () => {
                   }}
                   className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                     form.participantMode === "manual"
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-indigo-300"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
                   Manual Selection
@@ -476,18 +476,18 @@ const CreateExpense = () => {
 
             {/* Manual Participant Picker */}
             {form.participantMode === "manual" && (
-              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/25">
                 <div className="mb-3">
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Select participants
                   </h3>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     Choose which members should share this expense.
                   </p>
                 </div>
 
                 {fetchingMembers ? (
-                  <p className="py-2 text-xs text-slate-400">Loading members...</p>
+                  <p className="py-2 text-xs text-slate-400 dark:text-slate-500">Loading members...</p>
                 ) : (
                   <div className="space-y-2">
                     {activeMembers.map((member) => {
@@ -503,8 +503,8 @@ const CreateExpense = () => {
                           key={userId}
                           className={`flex cursor-pointer items-center gap-3 rounded-xl border p-2.5 transition ${
                             isSelected
-                              ? "border-indigo-200 bg-white shadow-sm"
-                              : "border-transparent bg-white/60 hover:border-slate-200"
+                              ? "border-indigo-200 bg-white shadow-sm dark:border-indigo-800 dark:bg-slate-800"
+                              : "border-transparent bg-white/60 hover:border-slate-200 dark:bg-slate-900/60 dark:hover:border-slate-700"
                           }`}
                         >
                           <input
@@ -513,10 +513,10 @@ const CreateExpense = () => {
                             onChange={() => toggleParticipant(userId)}
                             className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
                             {getInitial(memberName)}
                           </div>
-                          <span className="text-sm font-medium text-slate-700">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                             {memberName}
                           </span>
                         </label>
@@ -528,7 +528,7 @@ const CreateExpense = () => {
                 <div className="mt-4">
                   <label
                     htmlFor="participantReason"
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                   >
                     Reason for manual split
                   </label>
@@ -538,7 +538,7 @@ const CreateExpense = () => {
                     onChange={(e) => setParticipantReason(e.target.value)}
                     placeholder="Why are specific members selected?"
                     rows={2}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-950/50"
                   />
                 </div>
               </div>
@@ -597,9 +597,9 @@ const CreateExpense = () => {
 
         {/* ================= SUCCESS NOTIFICATION CARD ================= */}
         {createdExpense && (
-          <section className="mt-6 overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-sm">
-            <div className="flex items-center gap-4 border-b border-emerald-100 bg-emerald-50 p-6">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+          <section className="mt-6 overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900/60 dark:bg-slate-900">
+            <div className="flex items-center gap-4 border-b border-emerald-100 bg-emerald-50 p-6 dark:border-emerald-900/50 dark:bg-emerald-950/25">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50">
                 <svg
                   className="h-6 w-6 text-emerald-600"
                   fill="none"
@@ -615,10 +615,10 @@ const CreateExpense = () => {
                 </svg>
               </div>
               <div>
-                <h2 className="font-bold text-emerald-900">
+                <h2 className="font-bold text-emerald-900 dark:text-emerald-200">
                   Expense created successfully
                 </h2>
-                <p className="mt-0.5 text-sm text-emerald-700">
+                <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-300">
                   The expense has been distributed and saved.
                 </p>
               </div>
@@ -627,17 +627,17 @@ const CreateExpense = () => {
             <div className="p-6">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                  <p className="text-lg font-bold text-slate-900">
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">
                     {createdExpense.description}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Paid by{" "}
-                    <span className="font-medium text-slate-700">
+                    <span className="font-medium text-slate-700 dark:text-slate-200">
                       {resolveMemberName(createdExpense.paidBy, members)}
                     </span>
                   </p>
                 </div>
-                <p className="text-2xl font-bold text-slate-900">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">
                   {formatCurrency(createdExpense.amount)}
                 </p>
               </div>
@@ -645,27 +645,27 @@ const CreateExpense = () => {
               {/* Split Details Breakdown */}
               <div className="mt-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Split details
                   </h3>
-                  <span className="text-xs font-medium text-slate-400">
+                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
                     {createdExpense.participants?.length || 0} members
                   </span>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
                   {createdExpense.participants?.map((participant) => (
                     <div
                       key={getId(participant.user)}
-                      className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-0"
+                      className="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-0 dark:border-slate-800"
                     >
-                      <span className="text-sm font-medium text-slate-700">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                         {resolveMemberName(
                           participant.user || participant,
                           members,
                         )}
                       </span>
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-slate-900 dark:text-white">
                         {formatCurrency(participant.share)}
                       </span>
                     </div>
@@ -676,23 +676,23 @@ const CreateExpense = () => {
               {/* Excluded Members Box */}
               {createdExpense.excludedMembers?.length > 0 && (
                 <div className="mt-5">
-                  <h3 className="mb-3 text-sm font-bold text-slate-900">
+                  <h3 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">
                     Excluded members
                   </h3>
                   <div className="space-y-2">
                     {createdExpense.excludedMembers.map((member) => (
                       <div
                         key={getId(member.user)}
-                        className="flex items-center justify-between rounded-xl border border-amber-200/60 bg-amber-50 px-4 py-3"
+                        className="flex items-center justify-between rounded-xl border border-amber-200/60 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/25"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
                             {getInitial(
                               resolveMemberName(member.user || member, members),
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-800">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                               {resolveMemberName(
                                 member.user || member,
                                 members,
@@ -704,7 +704,7 @@ const CreateExpense = () => {
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs font-semibold text-slate-500">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                           ₹0.00
                         </span>
                       </div>
@@ -717,13 +717,13 @@ const CreateExpense = () => {
                 <button
                   type="button"
                   onClick={() => navigate(`/expenses/${createdExpense._id}`)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
                 >
                   View expense details
                 </button>
                 <Link
                   to="/expenses"
-                  className="flex flex-1 items-center justify-center rounded-xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                  className="flex flex-1 items-center justify-center rounded-xl bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   Back to All Expenses
                 </Link>

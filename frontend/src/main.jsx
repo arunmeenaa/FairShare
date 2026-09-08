@@ -9,10 +9,12 @@ import "./index.css";
 import { AuthProvider } from "./context/AuthContext";
 import { HouseholdProvider } from "./context/HouseholdContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ThemeProvider } from "./context/ThemeContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
+    <ThemeProvider>
       <AuthProvider>
         <HouseholdProvider>
           <NotificationProvider>
@@ -41,6 +43,7 @@ createRoot(document.getElementById("root")).render(
           </NotificationProvider>
         </HouseholdProvider>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>
 );

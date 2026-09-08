@@ -32,6 +32,7 @@ const formatCategory = (category) => {
 
 const getId = (target) => {
   if (!target) return "";
+
   if (typeof target === "object") {
     return (
       target._id ||
@@ -41,6 +42,7 @@ const getId = (target) => {
       ""
     ).toString();
   }
+
   return target.toString();
 };
 
@@ -50,6 +52,7 @@ const resolveMemberName = (target, memberRoster = []) => {
   if (typeof target === "object" && target.name) {
     return target.name;
   }
+
   if (typeof target === "object" && target.user?.name) {
     return target.user.name;
   }
@@ -60,6 +63,7 @@ const resolveMemberName = (target, memberRoster = []) => {
     const matched = memberRoster.find((m) => {
       const mUserId = getId(m.user);
       const mId = getId(m);
+
       return mUserId === targetId || mId === targetId;
     });
 
@@ -113,27 +117,46 @@ const RecentExpenses = () => {
   const [error, setError] = useState("");
 
   const now = new Date();
-  const [receiptMonth, setReceiptMonth] = useState(now.getMonth() + 1);
-  const [receiptYear, setReceiptYear] = useState(now.getFullYear());
+
+  const [receiptMonth, setReceiptMonth] = useState(
+    now.getMonth() + 1,
+  );
+
+  const [receiptYear, setReceiptYear] = useState(
+    now.getFullYear(),
+  );
 
   const currentUserId = getId(user);
 
   const fetchData = useCallback(async () => {
-    if (!currentHousehold?._id) return;
+    if (!currentHousehold?._id) {
+      setExpenses([]);
+      setMembers([]);
+      setFetching(false);
+      return;
+    }
 
     try {
       setFetching(true);
       setError("");
 
-      const [expenseResponse, memberResponse] = await Promise.all([
-        api.get(`/expenses/${currentHousehold._id}`),
-        api.get(`/households/${currentHousehold._id}/members`),
-      ]);
+      const [expenseResponse, memberResponse] =
+        await Promise.all([
+          api.get(`/expenses/${currentHousehold._id}`),
+          api.get(
+            `/households/${currentHousehold._id}/members`,
+          ),
+        ]);
 
       setExpenses(expenseResponse.data.expenses || []);
       setMembers(memberResponse.data.members || []);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load expenses");
+      console.error("Failed to load expenses:", err);
+
+      setError(
+        err.response?.data?.message ||
+          "Failed to load expenses",
+      );
     } finally {
       setFetching(false);
     }
@@ -144,14 +167,20 @@ const RecentExpenses = () => {
   }, [fetchData]);
 
   const triggerBlobDownload = (blobData, filename) => {
-    const blob = new Blob([blobData], { type: "application/pdf" });
+    const blob = new Blob([blobData], {
+      type: "application/pdf",
+    });
+
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
+
     link.href = url;
     link.download = filename;
+
     document.body.appendChild(link);
     link.click();
     link.remove();
+
     window.URL.revokeObjectURL(url);
   };
 
@@ -176,7 +205,10 @@ const RecentExpenses = () => {
 
       toast.success("Expense receipt downloaded");
     } catch (err) {
-      console.error("Failed to download expense receipt:", err);
+      console.error(
+        "Failed to download expense receipt:",
+        err,
+      );
 
       if (err.response?.data instanceof Blob) {
         try {
@@ -184,14 +216,18 @@ const RecentExpenses = () => {
           const errorData = JSON.parse(text);
 
           toast.error(
-            errorData.message || "Failed to download expense receipt",
+            errorData.message ||
+              "Failed to download expense receipt",
           );
         } catch {
-          toast.error("Failed to download expense receipt");
+          toast.error(
+            "Failed to download expense receipt",
+          );
         }
       } else {
         toast.error(
-          err.response?.data?.message || "Failed to download expense receipt",
+          err.response?.data?.message ||
+            "Failed to download expense receipt",
         );
       }
     }
@@ -217,7 +253,10 @@ const RecentExpenses = () => {
         responseType: "blob",
       });
 
-      const formattedMonth = String(receiptMonth).padStart(2, "0");
+      const formattedMonth = String(
+        receiptMonth,
+      ).padStart(2, "0");
+
       const filename =
         type === "personal"
           ? `FairShare-My-Receipt-${receiptYear}-${formattedMonth}.pdf`
@@ -231,19 +270,23 @@ const RecentExpenses = () => {
           : "Household statement downloaded",
       );
     } catch (err) {
-      console.error("Failed to download monthly statement:", err);
+      console.error(
+        "Failed to download monthly statement:",
+        err,
+      );
+
       toast.error("Failed to download statement");
     }
   };
 
   if (!currentHousehold) {
     return (
-      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10">
+      <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-10 transition-colors duration-300 dark:bg-slate-950">
         <div className="mx-auto flex min-h-[60vh] max-w-lg items-center justify-center">
-          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+          <div className="w-full rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10">
               <svg
-                className="h-8 w-8 text-indigo-600"
+                className="h-8 w-8 text-indigo-600 dark:text-indigo-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -256,11 +299,14 @@ const RecentExpenses = () => {
                 />
               </svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold text-slate-900">
+
+            <h1 className="mt-6 text-2xl font-bold text-slate-900 dark:text-white">
               Select a household
             </h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Select a household before adding or viewing shared expenses.
+
+            <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+              Select a household before adding or viewing
+              shared expenses.
             </p>
           </div>
         </div>
@@ -269,20 +315,22 @@ const RecentExpenses = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 pb-28 transition-colors duration-300 sm:px-6 lg:px-8 lg:pb-8 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl">
         {/* ================= HEADER ================= */}
+
         <div className="mb-6">
-          <p className="text-sm font-medium text-indigo-600">
+          <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
             {currentHousehold.name}
           </p>
 
           <div className="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Expenses
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
+
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Manage and track your household transactions.
               </p>
             </div>
@@ -290,7 +338,7 @@ const RecentExpenses = () => {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 to="/expenses/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
               >
                 <svg
                   className="h-4 w-4"
@@ -305,17 +353,24 @@ const RecentExpenses = () => {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
+
                 Add Expense
               </Link>
 
               {/* Month Picker */}
               <select
                 value={receiptMonth}
-                onChange={(e) => setReceiptMonth(Number(e.target.value))}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                onChange={(e) =>
+                  setReceiptMonth(Number(e.target.value))
+                }
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-indigo-400 dark:focus:ring-indigo-400/10"
               >
                 {MONTHS.map((name, index) => (
-                  <option key={index + 1} value={index + 1}>
+                  <option
+                    key={index + 1}
+                    value={index + 1}
+                    className="dark:bg-slate-900"
+                  >
                     {name}
                   </option>
                 ))}
@@ -324,13 +379,20 @@ const RecentExpenses = () => {
               {/* Year Picker */}
               <select
                 value={receiptYear}
-                onChange={(e) => setReceiptYear(Number(e.target.value))}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                onChange={(e) =>
+                  setReceiptYear(Number(e.target.value))
+                }
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-indigo-400 dark:focus:ring-indigo-400/10"
               >
                 {[-2, -1, 0, 1].map((offset) => {
                   const y = now.getFullYear() + offset;
+
                   return (
-                    <option key={y} value={y}>
+                    <option
+                      key={y}
+                      value={y}
+                      className="dark:bg-slate-900"
+                    >
                       {y}
                     </option>
                   );
@@ -340,11 +402,13 @@ const RecentExpenses = () => {
               {/* Personal Receipt */}
               <button
                 type="button"
-                onClick={() => downloadMonthlyReceipt("personal")}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                onClick={() =>
+                  downloadMonthlyReceipt("personal")
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="h-4 w-4 text-slate-500 dark:text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -356,17 +420,20 @@ const RecentExpenses = () => {
                     d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
                   />
                 </svg>
+
                 My Receipt
               </button>
 
               {/* Household Statement */}
               <button
                 type="button"
-                onClick={() => downloadMonthlyReceipt("household")}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                onClick={() =>
+                  downloadMonthlyReceipt("household")
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
               >
                 <svg
-                  className="h-4 w-4"
+                  className="h-4 w-4 text-slate-500 dark:text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -378,6 +445,7 @@ const RecentExpenses = () => {
                     d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
                   />
                 </svg>
+
                 Household Statement
               </button>
             </div>
@@ -385,11 +453,12 @@ const RecentExpenses = () => {
         </div>
 
         {/* ================= ERROR BANNER ================= */}
+
         {error && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100">
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/10">
               <svg
-                className="h-4 w-4 text-red-600"
+                className="h-4 w-4 text-red-600 dark:text-red-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -402,54 +471,68 @@ const RecentExpenses = () => {
                 />
               </svg>
             </div>
+
             <div>
-              <p className="text-sm font-semibold text-red-800">
+              <p className="text-sm font-semibold text-red-800 dark:text-red-300">
                 Something went wrong
               </p>
-              <p className="mt-0.5 text-sm text-red-600">{error}</p>
+
+              <p className="mt-0.5 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </p>
             </div>
           </div>
         )}
 
         {/* ================= RECENT EXPENSES LIST ================= */}
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 p-6">
-            <div className="flex items-center justify-between">
+
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+          <div className="border-b border-slate-100 p-6 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   Recent expenses
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
+
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Your household's recorded activity.
                 </p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+
+              <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 {expenses.length}{" "}
-                {expenses.length === 1 ? "expense" : "expenses"}
+                {expenses.length === 1
+                  ? "expense"
+                  : "expenses"}
               </span>
             </div>
           </div>
 
           {fetching ? (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="animate-pulse p-5">
+                <div
+                  key={item}
+                  className="animate-pulse p-5"
+                >
                   <div className="flex gap-4">
-                    <div className="h-11 w-11 rounded-xl bg-slate-100" />
+                    <div className="h-11 w-11 rounded-xl bg-slate-100 dark:bg-slate-800" />
+
                     <div className="flex-1">
-                      <div className="h-4 w-40 rounded bg-slate-100" />
-                      <div className="mt-2 h-3 w-28 rounded bg-slate-100" />
+                      <div className="h-4 w-40 rounded bg-slate-100 dark:bg-slate-800" />
+                      <div className="mt-2 h-3 w-28 rounded bg-slate-100 dark:bg-slate-800" />
                     </div>
-                    <div className="h-5 w-20 rounded bg-slate-100" />
+
+                    <div className="h-5 w-20 rounded bg-slate-100 dark:bg-slate-800" />
                   </div>
                 </div>
               ))}
             </div>
           ) : expenses.length === 0 ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <svg
-                  className="h-7 w-7 text-slate-400"
+                  className="h-7 w-7 text-slate-400 dark:text-slate-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -462,72 +545,101 @@ const RecentExpenses = () => {
                   />
                 </svg>
               </div>
-              <h3 className="mt-4 font-semibold text-slate-900">
+
+              <h3 className="mt-4 font-semibold text-slate-900 dark:text-white">
                 No expenses yet
               </h3>
-              <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-500">
-                Add your first household expense using the creation page.
+
+              <p className="mx-auto mt-1 max-w-xs text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Add your first household expense using the
+                creation page.
               </p>
+
               <div className="mt-6">
                 <Link
                   to="/expenses/new"
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
                 >
                   Create Expense
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {expenses.map((expense) => {
-                const excluded = expense.excludedMembers || [];
+                const excluded =
+                  expense.excludedMembers || [];
+
                 const isUserExcluded = excluded.some(
                   (m) =>
                     getId(m.user) === currentUserId ||
                     getId(m) === currentUserId,
                 );
+
                 const awayMembers = excluded
-                  .filter((m) => m.status === "away" || m.reason)
-                  .map((m) => resolveMemberName(m.user || m, members));
+                  .filter(
+                    (m) =>
+                      m.status === "away" || m.reason,
+                  )
+                  .map((m) =>
+                    resolveMemberName(
+                      m.user || m,
+                      members,
+                    ),
+                  );
 
                 const icon =
-                  CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
-                const payerName = resolveMemberName(expense.paidBy, members);
+                  CATEGORY_ICONS[
+                    expense.category?.toLowerCase()
+                  ] || "💳";
+
+                const payerName = resolveMemberName(
+                  expense.paidBy,
+                  members,
+                );
 
                 return (
                   <div
                     key={expense._id}
-                    className="flex w-full items-center gap-3 p-5 transition hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 p-4 transition-colors hover:bg-slate-50 sm:gap-3 sm:p-5 dark:hover:bg-slate-800/50"
                   >
                     <button
                       type="button"
-                      onClick={() => navigate(`/expenses/${expense._id}`)}
-                      className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                      onClick={() =>
+                        navigate(
+                          `/expenses/${expense._id}`,
+                        )
+                      }
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
                     >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-xl">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-lg dark:bg-indigo-500/10 sm:h-11 sm:w-11">
                         {icon}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate font-semibold text-slate-900">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <h3 className="min-w-0 truncate font-semibold text-slate-900 dark:text-slate-100">
                             {expense.description}
                           </h3>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                            {formatCategory(expense.category)}
+
+                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                            {formatCategory(
+                              expense.category,
+                            )}
                           </span>
                         </div>
 
-                        <p className="mt-0.5 text-sm text-slate-500">
+                        <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">
                           Paid by{" "}
-                          <span className="font-medium text-slate-700">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
                             {payerName}
                           </span>
                           {" • "}
                           {formatDate(expense.date)}
                           {" • "}
                           <span>
-                            {expense.participantMode === "manual"
+                            {expense.participantMode ===
+                            "manual"
                               ? "Manual split"
                               : "Automatic split"}
                           </span>
@@ -535,33 +647,38 @@ const RecentExpenses = () => {
 
                         {/* Away / Not Included Member Indicators */}
                         {isUserExcluded ? (
-                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
                             <span>●</span>
                             You were away
                           </div>
                         ) : awayMembers.length > 0 ? (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-slate-400 dark:text-slate-500">
                               Away:
                             </span>
-                            {awayMembers.map((name, idx) => (
-                              <span
-                                key={`${name}-${idx}`}
-                                className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700"
-                              >
-                                {name}
-                              </span>
-                            ))}
+
+                            {awayMembers.map(
+                              (name, idx) => (
+                                <span
+                                  key={`${name}-${idx}`}
+                                  className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
+                                >
+                                  {name}
+                                </span>
+                              ),
+                            )}
                           </div>
                         ) : null}
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <p className="font-bold text-slate-900">
+                        <p className="text-sm font-bold text-slate-900 sm:text-base dark:text-slate-100">
                           {formatCurrency(expense.amount)}
                         </p>
-                        {expense.participantMode === "manual" && (
-                          <span className="mt-1 inline-block rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600">
+
+                        {expense.participantMode ===
+                          "manual" && (
+                          <span className="mt-1 hidden rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-600 dark:bg-violet-500/10 dark:text-violet-300 sm:inline-block">
                             Manual
                           </span>
                         )}
@@ -571,8 +688,10 @@ const RecentExpenses = () => {
                     {/* Download Specific Receipt Button */}
                     <button
                       type="button"
-                      onClick={() => downloadReceipt(expense._id)}
-                      className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                      onClick={() =>
+                        downloadReceipt(expense._id)
+                      }
+                      className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                       title="Download receipt"
                       aria-label={`Download receipt for ${expense.description}`}
                     >

@@ -152,7 +152,7 @@ const register = async (req, res) => {
       },
       household: household
         ? {
-            id: household._id,
+            _id: household._id,
             name: household.name,
             inviteCode: household.inviteCode,
             role: household.members.find(
