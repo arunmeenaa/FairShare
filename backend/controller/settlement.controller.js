@@ -1,10 +1,7 @@
 const Settlement = require("../model/settlement.model");
 const Household = require("../model/household.model");
 const createAuditLog = require("../utils/createAuditLog");
-const {
-  calculateSettlement,
-  generateTransactions,
-} = require("../services/settlement.service");
+const { calculateMonthSummary } = require("../services/settlement.service");
 const { createNotification } = require("../services/notification.service");
 
 const calculateMonthlySettlement = async (req, res) => {
@@ -57,13 +54,13 @@ const calculateMonthlySettlement = async (req, res) => {
 
     const isNewSettlement = !existingSettlement;
 
-    const calculation = await calculateSettlement({
+    const calculation = await calculateMonthSummary({
       householdId,
       month: monthNumber,
       year: yearNumber,
     });
 
-    const newTransactions = generateTransactions(calculation.memberBalances);
+    const newTransactions = calculation.transactions;
 
     let transactions = newTransactions;
 
@@ -104,7 +101,7 @@ const calculateMonthlySettlement = async (req, res) => {
         transactions,
       },
       {
-        new: true,
+        returnDocument: "after",
         upsert: true,
         setDefaultsOnInsert: true,
       },

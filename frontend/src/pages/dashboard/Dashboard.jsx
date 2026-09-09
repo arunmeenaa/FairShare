@@ -40,6 +40,28 @@ const getId = (target) => {
   return target.toString();
 };
 
+const getMemberName = (
+  target,
+  members = [],
+) => {
+  const targetId = getId(target);
+
+  if (!targetId) {
+    return "Unknown Member";
+  }
+
+  const member = members.find(
+    (item) =>
+      getId(item.user) === targetId,
+  );
+
+  return (
+    member?.user?.name ||
+    member?.name ||
+    "Unknown Member"
+  );
+};
+
 const CATEGORY_ICONS = {
   grocery: "🛒",
   electricity: "⚡",
@@ -86,10 +108,7 @@ const StatCard = ({
 
 const ContributionBar = ({ label, amount, total, colorClass }) => {
   const percentage = total
-    ? Math.min(
-        100,
-        Math.max(0, Math.round(((amount || 0) / total) * 100)),
-      )
+    ? Math.min(100, Math.max(0, Math.round(((amount || 0) / total) * 100)))
     : 0;
 
   return (
@@ -124,6 +143,7 @@ const Dashboard = () => {
   const { user } = useAuth();
 
   const [report, setReport] = useState(null);
+  const [previousReport, setPreviousReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const householdId = currentHousehold?._id;
@@ -132,7 +152,7 @@ const Dashboard = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchReport = async () => {
+    const fetchReports = async () => {
       if (!householdId) return;
 
       try {
@@ -140,24 +160,47 @@ const Dashboard = () => {
 
         const currentDate = new Date();
 
-        const response = await api.get(
-          `/reports/monthly/${householdId}`,
-          {
+        // Current month
+        const currentMonth = currentDate.getMonth() + 1;
+
+        const currentYear = currentDate.getFullYear();
+
+        // Previous month
+        let previousMonth = currentMonth - 1;
+
+        let previousYear = currentYear;
+
+        if (previousMonth === 0) {
+          previousMonth = 12;
+          previousYear -= 1;
+        }
+
+        const [currentResponse, previousResponse] = await Promise.all([
+          api.get(`/reports/monthly/${householdId}`, {
             params: {
-              month: currentDate.getMonth() + 1,
-              year: currentDate.getFullYear(),
+              month: currentMonth,
+              year: currentYear,
             },
-          },
-        );
+          }),
+
+          api.get(`/reports/monthly/${householdId}`, {
+            params: {
+              month: previousMonth,
+              year: previousYear,
+            },
+          }),
+        ]);
 
         if (isMounted) {
-          setReport(response.data);
+          setReport(currentResponse.data);
+          setPreviousReport(previousResponse.data);
         }
       } catch (error) {
         console.error("Failed to fetch dashboard:", error);
 
         if (isMounted) {
           setReport(null);
+          setPreviousReport(null);
         }
       } finally {
         if (isMounted) {
@@ -169,7 +212,7 @@ const Dashboard = () => {
     if (householdLoading) return;
 
     if (householdId) {
-      fetchReport();
+      fetchReports();
     } else {
       setLoading(false);
     }
@@ -188,9 +231,7 @@ const Dashboard = () => {
   const sortedCategories = useMemo(() => {
     if (!report?.categoryTotals) return [];
 
-    return Object.entries(report.categoryTotals).sort(
-      ([, a], [, b]) => b - a,
-    );
+    return Object.entries(report.categoryTotals).sort(([, a], [, b]) => b - a);
   }, [report?.categoryTotals]);
 
   // Loading skeleton
@@ -283,7 +324,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-2 rounded-xl px-4 py-2.5">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               <Link
-                to="/expenses/new"
+                to="/expenses/create"
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-500/20 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus:ring-indigo-400/20"
               >
                 <svg
@@ -520,7 +561,151 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+{/* ================= PREVIOUS MONTH ================= */}
+<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+        Previous month
+      </p>
 
+      <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">
+        {getMonthName(previousReport?.month)}{" "}
+        {previousReport?.year}
+      </h2>
+
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        Previous month's household spending and settlement.
+      </p>
+    </div>
+
+    <div className="rounded-xl bg-indigo-50 px-4 py-3 dark:bg-indigo-500/10">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        Total spending
+      </p>
+
+      <p className="mt-1 text-lg font-bold text-indigo-600 dark:text-indigo-400">
+        {formatCurrency(
+          previousReport?.totalSpending,
+        )}
+      </p>
+    </div>
+  </div>
+
+  <div className="mt-6">
+    <div className="mb-4 flex items-center justify-between">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        Who pays whom
+      </h3>
+
+      {previousReport?.expenseCount !== undefined && (
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+          {previousReport.expenseCount}{" "}
+          {previousReport.expenseCount === 1
+            ? "expense"
+            : "expenses"}
+        </span>
+      )}
+    </div>
+
+    {previousReport?.transactions?.length > 0 ? (
+      <div className="space-y-3">
+        {previousReport.transactions.map(
+          (transaction, index) => {
+            const fromName =
+              getMemberName(
+                transaction.from,
+                previousReport.members,
+              );
+
+            const toName =
+              getMemberName(
+                transaction.to,
+                previousReport.members,
+              );
+
+            return (
+              <div
+                key={
+                  transaction._id ||
+                  `${getId(transaction.from)}-${getId(
+                    transaction.to,
+                  )}-${index}`
+                }
+                className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-800/60"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                    ↓
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {fromName}
+                    </p>
+
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      needs to pay
+                    </p>
+
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {toName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-left sm:text-right">
+                  <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                    {formatCurrency(
+                      transaction.amount,
+                    )}
+                  </p>
+
+                  <span
+                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                      transaction.status ===
+                      "paid"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                        : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                    }`}
+                  >
+                    {transaction.status ===
+                    "paid"
+                      ? "Paid"
+                      : "Pending"}
+                  </span>
+                </div>
+              </div>
+            );
+          },
+        )}
+      </div>
+    ) : (
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+            ✓
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+              Everyone was settled
+            </p>
+
+            <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-300">
+              No payments between household members
+              were required for{" "}
+              {getMonthName(
+                previousReport?.month,
+              )}{" "}
+              {previousReport?.year}.
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
         {/* ================= RECENT EXPENSES ================= */}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">

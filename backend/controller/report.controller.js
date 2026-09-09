@@ -3,10 +3,7 @@ const Household = require("../model/household.model");
 const Settlement = require("../model/settlement.model");
 const PDFDocument = require("pdfkit");
 
-const {
-  calculateSettlement,
-  generateTransactions,
-} = require("../services/settlement.service");
+const { calculateMonthSummary } = require("../services/settlement.service");
 
 const { generateExpenseReceipt } = require("../services/receipt.service");
 
@@ -67,12 +64,22 @@ const getMonthlyReport = async (req, res) => {
     const yearNumber = Number(year);
 
     if (!Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
-      return res.status(400).json({ message: "Invalid month" });
+      return res.status(400).json({
+        message: "Invalid month",
+      });
     }
 
     if (!Number.isInteger(yearNumber) || yearNumber < 2000) {
-      return res.status(400).json({ message: "Invalid year" });
+      return res.status(400).json({
+        message: "Invalid year",
+      });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authorization
+    |--------------------------------------------------------------------------
+    */
 
     const household = await Household.findOne({
       _id: householdId,
@@ -90,77 +97,37 @@ const getMonthlyReport = async (req, res) => {
       });
     }
 
-    const startDate = new Date(Date.UTC(yearNumber, monthNumber - 1, 1));
-    const endDate = new Date(Date.UTC(yearNumber, monthNumber, 1));
+    /*
+    |--------------------------------------------------------------------------
+    | CENTRAL MONTHLY CALCULATION
+    |--------------------------------------------------------------------------
+    */
 
-    const expenses = await Expense.find({
-      household: householdId,
-      isDeleted: false,
-      date: {
-        $gte: startDate,
-        $lt: endDate,
-      },
-    })
-      .populate("paidBy", "name email")
-      .populate("participants.user", "name email")
-      .populate("excludedMembers.user", "name email")
-      .sort({ date: -1 });
-
-    const totalSpending = expenses.reduce(
-      (total, expense) => total + Number(expense.amount),
-      0,
-    );
-
-    const categoryTotals = {};
-    expenses.forEach((expense) => {
-      if (!categoryTotals[expense.category]) {
-        categoryTotals[expense.category] = 0;
-      }
-      categoryTotals[expense.category] += Number(expense.amount);
+    const summary = await calculateMonthSummary({
+      householdId,
+      month: monthNumber,
+      year: yearNumber,
     });
 
-    Object.keys(categoryTotals).forEach((category) => {
-      categoryTotals[category] = roundMoney(categoryTotals[category]);
-    });
+    /*
+    |--------------------------------------------------------------------------
+    | Current User
+    |--------------------------------------------------------------------------
+    */
 
-    const memberStats = new Map();
+    const currentUser =
+      summary.memberBalances.find(
+        (member) => getId(member.user) === req.user._id.toString(),
+      ) || null;
 
-    household.members
-      .filter((member) => member.isActive)
-      .forEach((member) => {
-        const userId = getId(member.user);
-
-        memberStats.set(userId, {
-          user: member.user,
-          paid: 0,
-          share: 0,
-          balance: 0,
-        });
-      });
-
-    expenses.forEach((expense) => {
-      const payerId = getId(expense.paidBy);
-
-      if (memberStats.has(payerId)) {
-        memberStats.get(payerId).paid += Number(expense.amount);
-      }
-
-      (expense.participants || []).forEach((participant) => {
-        const userId = getId(participant.user);
-
-        if (memberStats.has(userId)) {
-          memberStats.get(userId).share += Number(participant.share);
-        }
-      });
-    });
-
-    memberStats.forEach((member) => {
-      member.paid = roundMoney(member.paid);
-      member.share = roundMoney(member.share);
-      member.balance = roundMoney(member.paid - member.share);
-    });
-
-    const currentUser = memberStats.get(req.user._id.toString());
+    /*
+    |--------------------------------------------------------------------------
+    | Existing Settlement Snapshot
+    |--------------------------------------------------------------------------
+    |
+    | This is kept separate from the live monthly calculation.
+    |
+    */
 
     const settlement = await Settlement.findOne({
       household: householdId,
@@ -168,14 +135,25 @@ const getMonthlyReport = async (req, res) => {
       year: yearNumber,
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Response
+    |--------------------------------------------------------------------------
+    */
+
     return res.status(200).json({
       month: monthNumber,
       year: yearNumber,
-      totalSpending: roundMoney(totalSpending),
-      categoryTotals,
-      currentUser: currentUser || null,
-      members: Array.from(memberStats.values()),
-      recentExpenses: expenses.slice(0, 5).map((expense) => ({
+
+      totalSpending: summary.totalExpenses,
+
+      categoryTotals: summary.categoryTotals,
+
+      currentUser,
+
+      members: summary.memberBalances,
+
+      recentExpenses: summary.expenses.slice(0, 5).map((expense) => ({
         _id: expense._id,
         description: expense.description,
         amount: expense.amount,
@@ -187,6 +165,16 @@ const getMonthlyReport = async (req, res) => {
         participantMode: expense.participantMode,
         participantReason: expense.participantReason,
       })),
+
+      /*
+       * Live calculation of who pays whom.
+       *
+       * This comes from the central calculation service.
+       */
+      transactions: summary.transactions,
+
+      expenseCount: summary.expenseCount,
+
       settlement: settlement
         ? {
             id: settlement._id,
@@ -198,7 +186,10 @@ const getMonthlyReport = async (req, res) => {
     });
   } catch (error) {
     console.error("Monthly report error:", error);
-    return res.status(500).json({ message: error.message });
+
+    return res.status(500).json({
+      message: error.message,
+    });
   }
 };
 
@@ -211,12 +202,22 @@ const generateMonthlyReceipt = async (req, res) => {
     const yearNumber = Number(year);
 
     if (!Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
-      return res.status(400).json({ message: "Invalid month" });
+      return res.status(400).json({
+        message: "Invalid month",
+      });
     }
 
     if (!Number.isInteger(yearNumber) || yearNumber < 2000) {
-      return res.status(400).json({ message: "Invalid year" });
+      return res.status(400).json({
+        message: "Invalid year",
+      });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authorization
+    |--------------------------------------------------------------------------
+    */
 
     const household = await Household.findOne({
       _id: householdId,
@@ -234,25 +235,53 @@ const generateMonthlyReceipt = async (req, res) => {
       });
     }
 
-    const expenses = await getMonthlyExpenses(
+    /*
+    |--------------------------------------------------------------------------
+    | CENTRAL MONTHLY CALCULATION
+    |--------------------------------------------------------------------------
+    */
+
+    const summary = await calculateMonthSummary({
       householdId,
-      monthNumber,
-      yearNumber,
-    );
+      month: monthNumber,
+      year: yearNumber,
+    });
+
+    const expenses = summary.expenses;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Current User
+    |--------------------------------------------------------------------------
+    */
 
     const userId = req.user._id.toString();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Expenses involving current user
+    |--------------------------------------------------------------------------
+    */
+
     const myExpenses = expenses.filter((expense) => {
       const paidByMe = getId(expense.paidBy) === userId;
+
       const participant = (expense.participants || []).some(
         (item) => getId(item.user) === userId,
       );
+
       const excluded = (expense.excludedMembers || []).some(
         (item) => getId(item.user) === userId,
       );
 
       return paidByMe || participant || excluded;
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Personal totals
+    |--------------------------------------------------------------------------
+    */
 
     let totalPaid = 0;
     let totalShare = 0;
@@ -272,21 +301,27 @@ const generateMonthlyReceipt = async (req, res) => {
     });
 
     totalPaid = roundMoney(totalPaid);
+
     totalShare = roundMoney(totalShare);
+
     const balance = roundMoney(totalPaid - totalShare);
 
-    const calculation = await calculateSettlement({
-      householdId,
-      month: monthNumber,
-      year: yearNumber,
-    });
+    /*
+    |--------------------------------------------------------------------------
+    | Personal transactions
+    |--------------------------------------------------------------------------
+    */
 
-    const transactions = generateTransactions(calculation.memberBalances);
-
-    const personalTransactions = transactions.filter(
+    const personalTransactions = summary.transactions.filter(
       (transaction) =>
         getId(transaction.from) === userId || getId(transaction.to) === userId,
     );
+
+    /*
+    |--------------------------------------------------------------------------
+    | PDF Headers
+    |--------------------------------------------------------------------------
+    */
 
     sendPdfHeaders(
       res,
@@ -298,24 +333,53 @@ const generateMonthlyReceipt = async (req, res) => {
 
     const doc = createPdf(res);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Header
+    |--------------------------------------------------------------------------
+    */
+
     drawDocumentHeader(doc, {
       title: "Personal Expense Summary",
+
       subtitle: `${household.name} • ${getMonthName(
         monthNumber,
       )} ${yearNumber}`,
+
       rightText: req.user.name || "Member Receipt",
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Summary Cards
+    |--------------------------------------------------------------------------
+    */
+
     drawSummaryCards(doc, [
-      { label: "YOU PAID", value: money(totalPaid) },
-      { label: "YOUR SHARE", value: money(totalShare) },
+      {
+        label: "YOU PAID",
+        value: money(totalPaid),
+      },
+      {
+        label: "YOUR SHARE",
+        value: money(totalShare),
+      },
       {
         label: balance > 0 ? "TO RECEIVE" : balance < 0 ? "TO PAY" : "SETTLED",
+
         value: money(Math.abs(balance)),
+
         highlight: balance !== 0,
+
         positive: balance > 0,
       },
     ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Your Expense Activity
+    |--------------------------------------------------------------------------
+    */
 
     sectionTitle(doc, "YOUR EXPENSE ACTIVITY");
 
@@ -327,6 +391,12 @@ const generateMonthlyReceipt = async (req, res) => {
       });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Settlement Breakdown
+    |--------------------------------------------------------------------------
+    */
+
     sectionTitle(doc, "SETTLEMENT BREAKDOWN");
 
     if (!personalTransactions.length) {
@@ -336,7 +406,7 @@ const generateMonthlyReceipt = async (req, res) => {
         drawTransactionCard(
           doc,
           transaction,
-          calculation.memberBalances,
+          summary.memberBalances,
           household,
         );
       });
@@ -348,8 +418,11 @@ const generateMonthlyReceipt = async (req, res) => {
     doc.end();
   } catch (error) {
     console.error("Generate monthly receipt error:", error);
+
     if (!res.headersSent) {
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({
+        message: error.message,
+      });
     }
   }
 };
@@ -363,12 +436,22 @@ const generateHouseholdReceipt = async (req, res) => {
     const yearNumber = Number(year);
 
     if (!Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
-      return res.status(400).json({ message: "Invalid month" });
+      return res.status(400).json({
+        message: "Invalid month",
+      });
     }
 
     if (!Number.isInteger(yearNumber) || yearNumber < 2000) {
-      return res.status(400).json({ message: "Invalid year" });
+      return res.status(400).json({
+        message: "Invalid year",
+      });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authorization
+    |--------------------------------------------------------------------------
+    */
 
     const household = await Household.findOne({
       _id: householdId,
@@ -386,19 +469,27 @@ const generateHouseholdReceipt = async (req, res) => {
       });
     }
 
-    const expenses = await getMonthlyExpenses(
-      householdId,
-      monthNumber,
-      yearNumber,
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | CENTRAL MONTHLY CALCULATION
+    |--------------------------------------------------------------------------
+    */
 
-    const calculation = await calculateSettlement({
+    const summary = await calculateMonthSummary({
       householdId,
       month: monthNumber,
       year: yearNumber,
     });
 
-    const transactions = generateTransactions(calculation.memberBalances);
+    const expenses = summary.expenses;
+
+    const transactions = summary.transactions;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Existing settlement snapshot
+    |--------------------------------------------------------------------------
+    */
 
     const settlement = await Settlement.findOne({
       household: householdId,
@@ -406,10 +497,11 @@ const generateHouseholdReceipt = async (req, res) => {
       year: yearNumber,
     });
 
-    const totalSpending = expenses.reduce(
-      (sum, expense) => sum + Number(expense.amount),
-      0,
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | PDF Headers
+    |--------------------------------------------------------------------------
+    */
 
     sendPdfHeaders(
       res,
@@ -421,17 +513,39 @@ const generateHouseholdReceipt = async (req, res) => {
 
     const doc = createPdf(res);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Header
+    |--------------------------------------------------------------------------
+    */
+
     drawDocumentHeader(doc, {
       title: "Household Monthly Statement",
+
       subtitle: `${household.name} • ${getMonthName(
         monthNumber,
       )} ${yearNumber}`,
+
       rightText: "Household Audit",
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Summary Cards
+    |--------------------------------------------------------------------------
+    */
+
     drawSummaryCards(doc, [
-      { label: "TOTAL SPENDING", value: money(totalSpending) },
-      { label: "TOTAL TRANSACTIONS", value: String(expenses.length) },
+      {
+        label: "TOTAL SPENDING",
+        value: money(summary.totalExpenses),
+      },
+
+      {
+        label: "TOTAL TRANSACTIONS",
+        value: String(expenses.length),
+      },
+
       {
         label: "ACTIVE MEMBERS",
         value: String(
@@ -440,10 +554,24 @@ const generateHouseholdReceipt = async (req, res) => {
       },
     ]);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Member Balances
+    |--------------------------------------------------------------------------
+    */
+
     sectionTitle(doc, "MEMBER BALANCES & SHARES");
-    drawMemberTable(doc, calculation.memberBalances, household);
+
+    drawMemberTable(doc, summary.memberBalances, household);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Expense History
+    |--------------------------------------------------------------------------
+    */
 
     sectionTitle(doc, "EXPENSE HISTORY");
+
     if (!expenses.length) {
       emptyMessage(doc, "No expenses recorded this month.");
     } else {
@@ -452,7 +580,14 @@ const generateHouseholdReceipt = async (req, res) => {
       });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Settlement Status
+    |--------------------------------------------------------------------------
+    */
+
     sectionTitle(doc, "SETTLEMENT STATUS");
+
     if (!transactions.length) {
       emptyMessage(
         doc,
@@ -465,7 +600,7 @@ const generateHouseholdReceipt = async (req, res) => {
         drawTransactionCard(
           doc,
           transaction,
-          calculation.memberBalances,
+          summary.memberBalances,
           household,
         );
       });
@@ -477,8 +612,11 @@ const generateHouseholdReceipt = async (req, res) => {
     doc.end();
   } catch (error) {
     console.error("Generate household receipt error:", error);
+
     if (!res.headersSent) {
-      return res.status(500).json({ message: error.message });
+      return res.status(500).json({
+        message: error.message,
+      });
     }
   }
 };
@@ -1070,27 +1208,6 @@ const ensureSpace = (doc, requiredSpace) => {
   if (doc.y + requiredSpace > bottomLimit) {
     doc.addPage();
   }
-};
-
-const getMonthlyExpenses = async (householdId, month, year) => {
-  const startDate = new Date(Date.UTC(year, month - 1, 1));
-  const endDate = new Date(Date.UTC(year, month, 1));
-
-  return Expense.find({
-    household: householdId,
-    isDeleted: false,
-    date: {
-      $gte: startDate,
-      $lt: endDate,
-    },
-  })
-    .populate("paidBy", "name email")
-    .populate("createdBy", "name email")
-    .populate("participants.user", "name email")
-    .populate("excludedMembers.user", "name email")
-    .sort({
-      date: 1,
-    });
 };
 
 const resolveMemberName = (target, memberBalances = [], household = null) => {
