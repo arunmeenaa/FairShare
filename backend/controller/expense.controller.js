@@ -13,6 +13,45 @@ const Availability = require("../model/availability.model");
 const {
   refreshOpenMonthlySettlement,
 } = require("../services/settlement.service");
+const Settlement = require("../model/settlement.model");
+
+const ensureMonthIsOpen = async ({ householdId, date }) => {
+  const expenseDate = new Date(date);
+
+  if (Number.isNaN(expenseDate.getTime())) {
+    throw new Error("Invalid expense date");
+  }
+
+  const month = expenseDate.getUTCMonth() + 1;
+
+  const year = expenseDate.getUTCFullYear();
+
+  const settlement = await Settlement.findOne({
+    household: householdId,
+    month,
+    year,
+  });
+
+  if (settlement && settlement.status === "closed") {
+    const monthName = expenseDate.toLocaleString("en-IN", {
+      month: "long",
+      timeZone: "UTC",
+    });
+
+    const error = new Error(
+      `The ${monthName} ${year} settlement is closed. Expenses cannot be added or changed for this month.`,
+    );
+
+    error.statusCode = 409;
+
+    throw error;
+  }
+
+  return {
+    month,
+    year,
+  };
+};
 
 const createExpense = async (req, res) => {
   try {
@@ -27,12 +66,6 @@ const createExpense = async (req, res) => {
       participantMode = "automatic",
       participantReason,
     } = req.body;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Basic validation
-    |--------------------------------------------------------------------------
-    */
 
     if (!description || amount === undefined || !category || !date) {
       return res.status(400).json({
@@ -73,12 +106,6 @@ const createExpense = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validate expense date
-    |--------------------------------------------------------------------------
-    */
-
     const expenseDate = new Date(date);
 
     if (Number.isNaN(expenseDate.getTime())) {
@@ -86,12 +113,6 @@ const createExpense = async (req, res) => {
         message: "Invalid expense date",
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validate household membership
-    |--------------------------------------------------------------------------
-    */
 
     const household = await Household.findOne({
       _id: householdId,
@@ -109,11 +130,16 @@ const createExpense = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Creator cannot add expense while away
-    |--------------------------------------------------------------------------
-    */
+    try {
+      await ensureMonthIsOpen({
+        householdId,
+        date: expenseDate,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 400).json({
+        message: error.message,
+      });
+    }
 
     const creatorIsAway = await isUserAway({
       userId: req.user._id,
@@ -127,22 +153,10 @@ const createExpense = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Creator is ALWAYS the payer
-    |--------------------------------------------------------------------------
-    */
-
     const paidBy = req.user._id;
 
     let eligibleMembers = [];
     let excludedMembers = [];
-
-    /*
-    |--------------------------------------------------------------------------
-    | MANUAL PARTICIPANTS
-    |--------------------------------------------------------------------------
-    */
 
     if (participantMode === "manual") {
       if (!Array.isArray(manualParticipants) || manualParticipants.length < 2) {
@@ -159,12 +173,6 @@ const createExpense = async (req, res) => {
 
       const uniqueParticipants = [...new Set(manualParticipants.map(String))];
 
-      /*
-      |--------------------------------------------------------------------------
-      | Creator MUST be included
-      |--------------------------------------------------------------------------
-      */
-
       const creatorId = req.user._id.toString();
 
       if (!uniqueParticipants.includes(creatorId)) {
@@ -173,12 +181,6 @@ const createExpense = async (req, res) => {
             "You must be included as a participant in manual expense splits.",
         });
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Validate participants are active household members
-      |--------------------------------------------------------------------------
-      */
 
       const activeMemberIds = new Set(
         household.members
@@ -196,23 +198,11 @@ const createExpense = async (req, res) => {
         });
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Selected participants
-      |--------------------------------------------------------------------------
-      */
-
       eligibleMembers = household.members.filter(
         (member) =>
           member.isActive &&
           uniqueParticipants.includes(member.user.toString()),
       );
-
-      /*
-      |--------------------------------------------------------------------------
-      | Members explicitly excluded
-      |--------------------------------------------------------------------------
-      */
 
       excludedMembers = household.members
         .filter(
@@ -226,12 +216,6 @@ const createExpense = async (req, res) => {
           status: "excluded",
         }));
     } else {
-      /*
-      |--------------------------------------------------------------------------
-      | AUTOMATIC PARTICIPANTS
-      |--------------------------------------------------------------------------
-      */
-
       const result = await getEligibleParticipants({
         householdId,
         category,
@@ -243,24 +227,12 @@ const createExpense = async (req, res) => {
       excludedMembers = result.excludedMembers;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Minimum participants
-    |--------------------------------------------------------------------------
-    */
-
     if (eligibleMembers.length < 2) {
       return res.status(400).json({
         message:
           "At least two available household members are required to create an expense",
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Calculate equal shares
-    |--------------------------------------------------------------------------
-    */
 
     const share =
       Math.round((numericAmount / eligibleMembers.length) * 100) / 100;
@@ -269,12 +241,6 @@ const createExpense = async (req, res) => {
       user: member.user._id || member.user,
       share,
     }));
-
-    /*
-    |--------------------------------------------------------------------------
-    | Fix rounding difference
-    |--------------------------------------------------------------------------
-    */
 
     const totalShares = participants.reduce(
       (sum, participant) => sum + Number(participant.share),
@@ -287,12 +253,6 @@ const createExpense = async (req, res) => {
       participants[0].share =
         Math.round((participants[0].share + difference) * 100) / 100;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Create expense
-    |--------------------------------------------------------------------------
-    */
 
     const expense = await Expense.create({
       household: householdId,
@@ -319,12 +279,6 @@ const createExpense = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Audit log
-    |--------------------------------------------------------------------------
-    */
-
     await createAuditLog({
       household: householdId,
 
@@ -339,12 +293,6 @@ const createExpense = async (req, res) => {
       after: expense.toObject(),
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Refresh open month's settlement
-    |--------------------------------------------------------------------------
-    */
-
     await refreshOpenMonthlySettlement({
       householdId,
 
@@ -353,23 +301,11 @@ const createExpense = async (req, res) => {
       year: expenseDate.getUTCFullYear(),
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Populate expense
-    |--------------------------------------------------------------------------
-    */
-
     const populatedExpense = await Expense.findById(expense._id)
       .populate("paidBy", "name email")
       .populate("createdBy", "name email")
       .populate("participants.user", "name email")
       .populate("excludedMembers.user", "name email");
-
-    /*
-    |--------------------------------------------------------------------------
-    | Notifications + Email
-    |--------------------------------------------------------------------------
-    */
 
     const emailJobs = [];
     const notificationJobs = [];
@@ -452,12 +388,6 @@ const createExpense = async (req, res) => {
       }
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Response
-    |--------------------------------------------------------------------------
-    */
-
     return res.status(201).json({
       message: "Expense added successfully",
 
@@ -468,7 +398,7 @@ const createExpense = async (req, res) => {
   } catch (error) {
     console.error("Create expense error:", error);
 
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       message: error.message,
     });
   }
@@ -646,12 +576,6 @@ const updateExpense = async (req, res) => {
       participantReason,
     } = req.body;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Verify household membership
-    |--------------------------------------------------------------------------
-    */
-
     const household = await Household.findOne({
       _id: householdId,
       members: {
@@ -668,12 +592,6 @@ const updateExpense = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Find expense
-    |--------------------------------------------------------------------------
-    */
-
     const expense = await Expense.findOne({
       _id: expenseId,
       household: householdId,
@@ -686,25 +604,20 @@ const updateExpense = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Snapshot before update
-    |--------------------------------------------------------------------------
-    */
-
     const before = expense.toObject();
 
     const oldDate = new Date(before.date);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Only creator can edit
-    |--------------------------------------------------------------------------
-    |
-    | Since creator is always the payer,
-    | this is effectively creator-only editing.
-    |
-    */
+    try {
+      await ensureMonthIsOpen({
+        householdId,
+        date: oldDate,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 400).json({
+        message: error.message,
+      });
+    }
 
     const isCreator = expense.createdBy.toString() === req.user._id.toString();
 
@@ -713,12 +626,6 @@ const updateExpense = async (req, res) => {
         message: "You are not allowed to edit this expense",
       });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Description
-    |--------------------------------------------------------------------------
-    */
 
     if (description !== undefined) {
       if (!description.trim()) {
@@ -729,12 +636,6 @@ const updateExpense = async (req, res) => {
 
       expense.description = description.trim();
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Amount
-    |--------------------------------------------------------------------------
-    */
 
     if (amount !== undefined) {
       const numericAmount = Number(amount);
@@ -747,12 +648,6 @@ const updateExpense = async (req, res) => {
 
       expense.amount = numericAmount;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Category
-    |--------------------------------------------------------------------------
-    */
 
     if (category !== undefined) {
       const allowedCategories = [
@@ -777,12 +672,6 @@ const updateExpense = async (req, res) => {
       expense.category = category;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Date
-    |--------------------------------------------------------------------------
-    */
-
     if (date !== undefined) {
       const expenseDate = new Date(date);
 
@@ -794,21 +683,17 @@ const updateExpense = async (req, res) => {
 
       expense.date = expenseDate;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | paidBy CANNOT be changed
-    |--------------------------------------------------------------------------
-    */
-
+    try {
+      await ensureMonthIsOpen({
+        householdId,
+        date: expense.date,
+      });
+    } catch (error) {
+      return res.status(error.statusCode || 400).json({
+        message: error.message,
+      });
+    }
     expense.paidBy = expense.createdBy;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Determine whether participants
-    | need recalculation
-    |--------------------------------------------------------------------------
-    */
 
     const participationChanged =
       category !== undefined ||
@@ -819,12 +704,6 @@ const updateExpense = async (req, res) => {
     if (participationChanged) {
       const mode = participantMode || expense.participantMode;
 
-      /*
-      |--------------------------------------------------------------------------
-      | Validate mode
-      |--------------------------------------------------------------------------
-      */
-
       if (!["automatic", "manual"].includes(mode)) {
         return res.status(400).json({
           message: "Invalid participant mode",
@@ -833,12 +712,6 @@ const updateExpense = async (req, res) => {
 
       let eligibleMembers = [];
       let excludedMembers = [];
-
-      /*
-      |--------------------------------------------------------------------------
-      | MANUAL MODE
-      |--------------------------------------------------------------------------
-      */
 
       if (mode === "manual") {
         if (
@@ -850,12 +723,6 @@ const updateExpense = async (req, res) => {
           });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Reason
-        |--------------------------------------------------------------------------
-        */
-
         const effectiveReason =
           participantReason?.trim() || expense.participantReason;
 
@@ -865,19 +732,7 @@ const updateExpense = async (req, res) => {
           });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Remove duplicate participants
-        |--------------------------------------------------------------------------
-        */
-
         const uniqueParticipants = [...new Set(manualParticipants.map(String))];
-
-        /*
-        |--------------------------------------------------------------------------
-        | Creator MUST participate
-        |--------------------------------------------------------------------------
-        */
 
         const creatorId = expense.createdBy.toString();
 
@@ -887,12 +742,6 @@ const updateExpense = async (req, res) => {
               "You must be included as a participant in manual expense splits.",
           });
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Active household members
-        |--------------------------------------------------------------------------
-        */
 
         const activeMemberIds = new Set(
           household.members
@@ -911,23 +760,11 @@ const updateExpense = async (req, res) => {
           });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Selected participants
-        |--------------------------------------------------------------------------
-        */
-
         eligibleMembers = household.members.filter(
           (member) =>
             member.isActive &&
             uniqueParticipants.includes(member.user.toString()),
         );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Excluded members
-        |--------------------------------------------------------------------------
-        */
 
         excludedMembers = household.members
           .filter(
@@ -943,12 +780,6 @@ const updateExpense = async (req, res) => {
 
         expense.participantReason = effectiveReason;
       } else {
-        /*
-        |--------------------------------------------------------------------------
-        | AUTOMATIC MODE
-        |--------------------------------------------------------------------------
-        */
-
         const result = await getEligibleParticipants({
           householdId,
 
@@ -964,24 +795,12 @@ const updateExpense = async (req, res) => {
         expense.participantReason = null;
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Validate participant count
-      |--------------------------------------------------------------------------
-      */
-
       if (eligibleMembers.length < 2) {
         return res.status(400).json({
           message:
             "At least two available household members are required for an expense",
         });
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Recalculate shares
-      |--------------------------------------------------------------------------
-      */
 
       const share =
         Math.round((Number(expense.amount) / eligibleMembers.length) * 100) /
@@ -992,12 +811,6 @@ const updateExpense = async (req, res) => {
 
         share,
       }));
-
-      /*
-      |--------------------------------------------------------------------------
-      | Fix rounding difference
-      |--------------------------------------------------------------------------
-      */
 
       const totalShares = expense.participants.reduce(
         (sum, participant) => sum + Number(participant.share),
@@ -1012,30 +825,12 @@ const updateExpense = async (req, res) => {
           Math.round((expense.participants[0].share + difference) * 100) / 100;
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Save recalculated participant data
-      |--------------------------------------------------------------------------
-      */
-
       expense.excludedMembers = excludedMembers;
 
       expense.participantMode = mode;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Save expense
-    |--------------------------------------------------------------------------
-    */
-
     await expense.save();
-
-    /*
-    |--------------------------------------------------------------------------
-    | Audit log
-    |--------------------------------------------------------------------------
-    */
 
     await createAuditLog({
       household: householdId,
@@ -1053,16 +848,6 @@ const updateExpense = async (req, res) => {
       after: expense.toObject(),
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Refresh old month
-    |--------------------------------------------------------------------------
-    |
-    | Important when date changes from one month
-    | to another.
-    |
-    */
-
     await refreshOpenMonthlySettlement({
       householdId,
 
@@ -1070,12 +855,6 @@ const updateExpense = async (req, res) => {
 
       year: oldDate.getUTCFullYear(),
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Refresh new month
-    |--------------------------------------------------------------------------
-    */
 
     const newDate = new Date(expense.date);
 
@@ -1087,23 +866,11 @@ const updateExpense = async (req, res) => {
       year: newDate.getUTCFullYear(),
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Populate updated expense
-    |--------------------------------------------------------------------------
-    */
-
     const updatedExpense = await Expense.findById(expense._id)
       .populate("paidBy", "name email")
       .populate("createdBy", "name email")
       .populate("participants.user", "name email")
       .populate("excludedMembers.user", "name email");
-
-    /*
-    |--------------------------------------------------------------------------
-    | Send update emails
-    |--------------------------------------------------------------------------
-    */
 
     const emailJobs = [];
 
@@ -1135,12 +902,6 @@ const updateExpense = async (req, res) => {
         );
       }
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | Response
-    |--------------------------------------------------------------------------
-    */
 
     return res.status(200).json({
       message: "Expense updated successfully",
