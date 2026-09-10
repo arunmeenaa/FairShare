@@ -663,6 +663,7 @@ const Navbar = () => {
               {/* Expenses */}
               <NavLink
                 to="/expenses"
+                end
                 className={({ isActive }) =>
                   `group flex min-h-[54px] min-w-0 flex-1 flex-col items-center justify-center rounded-[19px] py-1 transition-all duration-200 touch-manipulation select-none ${
                     isActive
@@ -685,6 +686,51 @@ const Navbar = () => {
 
                     <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
                       Expenses
+                    </span>
+                  </>
+                )}
+              </NavLink>
+
+              {/* Add Expense */}
+              <NavLink
+                to="/expenses/create"
+                aria-label="Add expense"
+                className={({ isActive }) =>
+                  `group relative flex min-h-[54px] min-w-0 flex-1 flex-col items-center justify-center rounded-[19px] py-1 transition-all duration-200 touch-manipulation select-none ${
+                    isActive
+                      ? "text-indigo-700 dark:text-indigo-200"
+                      : "text-indigo-600 dark:text-indigo-300"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`relative flex h-9 w-12 items-center justify-center rounded-[14px] bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-[0_7px_18px_rgba(79,70,229,0.28)] ring-1 ring-white/60 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_24px_rgba(79,70,229,0.34)] dark:from-indigo-500 dark:to-violet-500 dark:ring-white/15 ${
+                        isActive
+                          ? "scale-105 shadow-[0_10px_24px_rgba(79,70,229,0.38)] ring-2 ring-indigo-300/40 dark:ring-indigo-300/25"
+                          : ""
+                      }`}
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2.2}
+                          d="M12 5v14M5 12h14"
+                        />
+                      </svg>
+
+                      <span className="pointer-events-none absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-white/90 shadow-sm dark:bg-indigo-100" />
+                    </span>
+
+                    <span className="mt-0.5 whitespace-nowrap text-[9px] font-bold leading-none">
+                      Add Expense
                     </span>
                   </>
                 )}
@@ -720,35 +766,8 @@ const Navbar = () => {
                 )}
               </NavLink>
 
-              {/* Members */}
-              <NavLink
-                to="/members"
-                className={({ isActive }) =>
-                  `group flex min-h-[54px] min-w-0 flex-1 flex-col items-center justify-center rounded-[19px] py-1 transition-all duration-200 touch-manipulation select-none ${
-                    isActive
-                      ? "text-indigo-600 dark:text-indigo-300"
-                      : "text-slate-500 dark:text-slate-400"
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={`flex h-8 w-11 items-center justify-center rounded-[13px] transition-all duration-200 ${
-                        isActive
-                          ? "bg-gradient-to-b from-indigo-500/15 to-violet-500/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_4px_12px_rgba(99,102,241,0.10)] dark:from-indigo-400/20 dark:to-violet-400/10"
-                          : "group-hover:bg-white/50 dark:group-hover:bg-white/[0.05]"
-                      }`}
-                    >
-                      <BottomNavIcon type="members" active={isActive} />
-                    </span>
-
-                    <span className="mt-0.5 whitespace-nowrap text-[9px] font-semibold leading-none">
-                      Members
-                    </span>
-                  </>
-                )}
-              </NavLink>
+             
+             
 
               {/* More */}
               <button
@@ -783,9 +802,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* ========================================================= */}
-      {/* MOBILE MORE SHEET                                        */}
-      {/* ========================================================= */}
+     
 
       {mobileMoreOpen && (
         <div className="fixed inset-0 z-[60] h-[100dvh] w-screen max-w-[100vw] overflow-hidden lg:hidden">
@@ -927,6 +944,46 @@ const Navbar = () => {
                   Availability
                 </span>
 
+                <svg
+                  className="h-4 w-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </NavLink>
+
+               <NavLink
+                to="/members"
+                onClick={closeMobileMore}
+                className="flex items-center justify-between rounded-2xl border border-white/80 bg-white/45 px-4 py-3.5 text-sm font-semibold text-slate-700 backdrop-blur-xl transition hover:bg-white/70 dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-slate-200 dark:hover:bg-white/[0.06]"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.8}
+                        d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m9-10a4 4 0 100-8 4 4 0 000 8zm7 10v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+                      />
+                    </svg>
+                  </span>
+ 
+                  Members
+                </span>
+ 
                 <svg
                   className="h-4 w-4 text-slate-400"
                   fill="none"
