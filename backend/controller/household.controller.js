@@ -117,19 +117,26 @@ const getMyHouseholds = async (req, res) => {
       "members.user": req.user._id,
       "members.isActive": true,
     })
-      .populate("members.user", "name email")
+      .populate("members.user", "name email phone status")
       .populate("createdBy", "name email");
 
     const result = households.map((household) => {
       const householdData = household.toObject();
 
+      // Find the logged-in user's membership safely
       const currentMember = household.members.find(
         (member) =>
+          member.user &&
           member.user._id.toString() === req.user._id.toString() &&
           member.isActive,
       );
 
       const isAdmin = currentMember?.role === "admin";
+
+      // Remove stale member references from the response
+      householdData.members = householdData.members.filter(
+        (member) => member.user,
+      );
 
       if (!isAdmin) {
         delete householdData.inviteCode;
@@ -145,7 +152,7 @@ const getMyHouseholds = async (req, res) => {
     console.error("Get my households error:", error);
 
     return res.status(500).json({
-      message: error.message,
+      message: "Unable to load your households. Please try again.",
     });
   }
 };

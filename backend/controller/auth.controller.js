@@ -329,7 +329,7 @@ const getMe = async (req, res) => {
         },
       },
     })
-      .populate("members.user", "name email")
+      .populate("members.user", "name email phone status")
       .populate("createdBy", "name email");
 
     let householdData = null;
@@ -337,17 +337,20 @@ const getMe = async (req, res) => {
     if (household) {
       const currentMember = household.members.find(
         (member) =>
+          member.user &&
           member.user._id.toString() === req.user._id.toString() &&
           member.isActive,
       );
 
-      householdData = {
-        _id: household._id,
-        name: household.name,
-        inviteCode:
-          currentMember?.role === "admin" ? household.inviteCode : undefined,
-        role: currentMember?.role || "member",
-      };
+      if (currentMember) {
+        householdData = {
+          _id: household._id,
+          name: household.name,
+          role: currentMember.role || "member",
+          inviteCode:
+            currentMember.role === "admin" ? household.inviteCode : undefined,
+        };
+      }
     }
 
     return res.status(200).json({
@@ -358,7 +361,7 @@ const getMe = async (req, res) => {
     console.error("Get current user error:", error);
 
     return res.status(500).json({
-      message: error.message,
+      message: "Unable to load your account information. Please try again.",
     });
   }
 };
