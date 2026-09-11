@@ -699,49 +699,47 @@ const RecentExpenses = () => {
               ))}
             </div>
           ) : expenses.length === 0 ? (
-  <div className="px-6 py-16 text-center">
-    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-      <svg
-        className="h-7 w-7 text-slate-400 dark:text-slate-500"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.8}
-          d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM9 7h6M9 11h6M9 15h4"
-        />
-      </svg>
-    </div>
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                <svg
+                  className="h-7 w-7 text-slate-400 dark:text-slate-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.8}
+                    d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM9 7h6M9 11h6M9 15h4"
+                  />
+                </svg>
+              </div>
 
-    <h3 className="mt-4 font-semibold text-slate-900 dark:text-white">
-      {filterMonth || filterYear || filterPaidBy
-        ? "No matching expenses"
-        : "No expenses yet"}
-    </h3>
+              <h3 className="mt-4 font-semibold text-slate-900 dark:text-white">
+                {filterMonth || filterYear || filterPaidBy
+                  ? "No matching expenses"
+                  : "No expenses yet"}
+              </h3>
 
-    <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
-      {filterMonth || filterYear || filterPaidBy
-        ? "No expenses match the selected filters. Try changing or clearing your filters."
-        : "Add your first household expense using the creation page."}
-    </p>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
+                {filterMonth || filterYear || filterPaidBy
+                  ? "No expenses match the selected filters. Try changing or clearing your filters."
+                  : "Add your first household expense using the creation page."}
+              </p>
 
-    {!filterMonth &&
-      !filterYear &&
-      !filterPaidBy && (
-        <div className="mt-6">
-          <Link
-            to="/expenses/create"
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
-          >
-            Create Expense
-          </Link>
-        </div>
-      )}
-  </div>
-) : (
+              {!filterMonth && !filterYear && !filterPaidBy && (
+                <div className="mt-6">
+                  <Link
+                    to="/expenses/create"
+                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+                  >
+                    Create Expense
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {expenses.map((expense) => {
                 const excluded = expense.excludedMembers || [];
@@ -749,6 +747,17 @@ const RecentExpenses = () => {
                 const isUserExcluded = excluded.some(
                   (m) => getId(m.user) === currentUserId,
                 );
+
+                const currentMember = members.find(
+                  (member) => getId(member.user) === currentUserId,
+                );
+
+                const isGroceryExpense =
+                  expense.category?.toLowerCase() === "grocery";
+
+                const isNotGroceryParticipant =
+                  isGroceryExpense &&
+                  currentMember?.groceryParticipant === false;
 
                 const awayMembers = excluded
                   .filter((m) => m.status === "away" || m.reason)
@@ -800,7 +809,12 @@ const RecentExpenses = () => {
                         </p>
 
                         {/* Away / Not Included Member Indicators */}
-                        {isUserExcluded ? (
+                        {isNotGroceryParticipant ? (
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border text-red-400 border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold  dark:border-slate-700 dark:bg-slate-800 ">
+                            <span>⊘</span>
+                           You are Not a part of this expense
+                          </div>
+                        ) : isUserExcluded ? (
                           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
                             <span>●</span>
                             You were away
