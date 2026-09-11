@@ -15,7 +15,7 @@ export const HouseholdProvider = ({ children }) => {
 
   const requestIdRef = useRef(0);
 
-  const fetchHouseholds = async () => {
+  const fetchHouseholds = async (preferredHouseholdId = null) => {
     if (!user) {
       setHouseholds([]);
       setCurrentHousehold(null);
@@ -42,6 +42,26 @@ export const HouseholdProvider = ({ children }) => {
 
       setHouseholds(data);
 
+      // 1. Prefer the household explicitly provided by registration/login
+      if (preferredHouseholdId) {
+        const preferredHousehold = data.find(
+          (household) =>
+            household?._id?.toString() === preferredHouseholdId.toString(),
+        );
+
+        if (preferredHousehold) {
+          setCurrentHousehold(preferredHousehold);
+
+          localStorage.setItem(
+            "selectedHouseholdId",
+            preferredHousehold._id.toString(),
+          );
+
+          return data;
+        }
+      }
+
+      // 2. Otherwise restore the previously selected household
       const savedHouseholdId = localStorage.getItem("selectedHouseholdId");
 
       if (savedHouseholdId) {
@@ -52,11 +72,11 @@ export const HouseholdProvider = ({ children }) => {
 
         if (savedHousehold) {
           setCurrentHousehold(savedHousehold);
-
           return data;
         }
       }
 
+      // 3. Otherwise select the first available household
       if (data.length > 0) {
         setCurrentHousehold(data[0]);
 
@@ -65,7 +85,6 @@ export const HouseholdProvider = ({ children }) => {
         }
       } else {
         setCurrentHousehold(null);
-
         localStorage.removeItem("selectedHouseholdId");
       }
 

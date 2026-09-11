@@ -208,14 +208,40 @@ const login = async (req, res) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+    const household = await Household.findOne({
+      members: {
+        $elemMatch: {
+          user: user._id,
+          isActive: true,
+        },
+      },
+    });
+    let householdData = null;
 
+    if (household) {
+      const currentMember = household.members.find(
+        (member) =>
+          member.user.toString() === user._id.toString() && member.isActive,
+      );
+
+      householdData = {
+        _id: household._id,
+        name: household.name,
+        inviteCode:
+          currentMember?.role === "admin" ? household.inviteCode : undefined,
+        role: currentMember?.role || "member",
+      };
+    }
     return res.status(200).json({
       message: "Login successful",
+
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
       },
+
+      household: householdData,
     });
   } catch (error) {
     return res.status(500).json({
@@ -295,10 +321,42 @@ const logout = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
+    const household = await Household.findOne({
+      members: {
+        $elemMatch: {
+          user: req.user._id,
+          isActive: true,
+        },
+      },
+    })
+      .populate("members.user", "name email")
+      .populate("createdBy", "name email");
+
+    let householdData = null;
+
+    if (household) {
+      const currentMember = household.members.find(
+        (member) =>
+          member.user._id.toString() === req.user._id.toString() &&
+          member.isActive,
+      );
+
+      householdData = {
+        _id: household._id,
+        name: household.name,
+        inviteCode:
+          currentMember?.role === "admin" ? household.inviteCode : undefined,
+        role: currentMember?.role || "member",
+      };
+    }
+
     return res.status(200).json({
       user: req.user,
+      household: householdData,
     });
   } catch (error) {
+    console.error("Get current user error:", error);
+
     return res.status(500).json({
       message: error.message,
     });

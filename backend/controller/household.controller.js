@@ -269,7 +269,7 @@ const getHouseholdMembers = async (req, res) => {
           isActive: true,
         },
       },
-    }).populate("members.user", "name email");
+    }).populate("members.user", "name email phone status");
 
     if (!household) {
       return res.status(404).json({
@@ -277,7 +277,19 @@ const getHouseholdMembers = async (req, res) => {
       });
     }
 
-    const currentMember = household.members.find(
+    // Ignore household members whose User document no longer exists
+    const validMembers = household.members.filter((member) => {
+      if (!member.user) {
+        console.warn(
+          `Household ${householdId} contains a member with a missing user reference: ${member._id}`,
+        );
+        return false;
+      }
+
+      return true;
+    });
+
+    const currentMember = validMembers.find(
       (member) =>
         member.user._id.toString() === req.user._id.toString() &&
         member.isActive,
@@ -285,12 +297,14 @@ const getHouseholdMembers = async (req, res) => {
 
     const isAdmin = currentMember?.role === "admin";
 
-    const activeMembers = household.members.filter(
+    const activeMembers = validMembers.filter(
       (member) => member.isActive,
     );
 
     // Get availability for all active household members
-    const userIds = activeMembers.map((member) => member.user._id);
+    const userIds = activeMembers.map(
+      (member) => member.user._id,
+    );
 
     const availabilityRecords = await Availability.find({
       household: householdId,
@@ -308,7 +322,9 @@ const getHouseholdMembers = async (req, res) => {
     );
 
     const membersWithAvailability = activeMembers.map((member) => {
-      const availability = availabilityMap.get(member.user._id.toString());
+      const availability = availabilityMap.get(
+        member.user._id.toString(),
+      );
 
       return {
         _id: member._id,
@@ -318,9 +334,11 @@ const getHouseholdMembers = async (req, res) => {
         isActive: member.isActive,
         groceryParticipant: member.groceryParticipant ?? true,
 
-        // IMPORTANT
-        availabilityStatus: availability?.status || "available",
-        availabilityReason: availability?.reason || "",
+        availabilityStatus:
+          availability?.status || "available",
+
+        availabilityReason:
+          availability?.reason || "",
       };
     });
 

@@ -321,29 +321,7 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl px-4 py-2.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              <Link
-                to="/expenses/create"
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-indigo-500/20 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus:ring-indigo-400/20"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Add Expense
-              </Link>
-            </span>
-          </div>
+          
         </div>
 
         {/* ================= STAT CARDS ================= */}

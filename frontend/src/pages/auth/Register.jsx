@@ -97,17 +97,14 @@ const Register = () => {
 
       const response = await api.post("/auth/register", payload);
 
-      await getCurrentUser();
-
       const createdHousehold = response.data?.household;
+
+      await getCurrentUser();
 
       if (createdHousehold?._id) {
         selectHousehold(createdHousehold);
-
-        await fetchHouseholds();
-      } else {
-        await fetchHouseholds();
       }
+      await fetchHouseholds();
 
       toast.success(
         formData.householdMode === "join"

@@ -6,6 +6,7 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [household, setHousehold] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const getCurrentUser = async () => {
@@ -13,12 +14,14 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get("/auth/me");
 
       setUser(response.data.user);
+      setHousehold(response.data.household || null);
     } catch (error) {
       if (error.response?.status !== 401) {
         console.error("Failed to get current user:", error);
       }
 
       setUser(null);
+      setHousehold(null);
     } finally {
       setLoading(false);
     }
@@ -35,6 +38,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     setUser(response.data.user);
+    setHousehold(response.data.household || null);
 
     return response.data;
   };
@@ -53,6 +57,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout failed:", error);
     } finally {
       setUser(null);
+      setHousehold(null);
 
       localStorage.removeItem("selectedHouseholdId");
     }
@@ -62,11 +67,13 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        household,
         loading,
         login,
         logout,
         getCurrentUser,
         updateUser,
+        setHousehold,
       }}
     >
       {children}
