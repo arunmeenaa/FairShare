@@ -60,17 +60,64 @@ const calculateMonthlySettlement = async (req, res) => {
       year: yearNumber,
     });
 
-    const newTransactions = calculation.transactions;
+    const newTransactions = Array.isArray(calculation.transactions)
+      ? calculation.transactions
+      : [];
 
     let transactions = newTransactions;
 
+    /*
+     * Preserve previously paid transactions.
+     *
+     * Some old settlements may contain transactions whose
+     * "from" or "to" user no longer exists. In that case,
+     * Mongoose can return null and calling .toString()
+     * directly would crash the settlement calculation.
+     */
     if (existingSettlement) {
       transactions = newTransactions.map((newTransaction) => {
+        if (!newTransaction?.from || !newTransaction?.to) {
+          return newTransaction;
+        }
+
+        const newFromId = newTransaction.from?._id
+          ? newTransaction.from._id.toString()
+          : newTransaction.from?.toString();
+
+        const newToId = newTransaction.to?._id
+          ? newTransaction.to._id.toString()
+          : newTransaction.to?.toString();
+
+        if (!newFromId || !newToId) {
+          return newTransaction;
+        }
+
         const oldTransaction = existingSettlement.transactions.find(
-          (oldTransaction) =>
-            oldTransaction.from.toString() === newTransaction.from.toString() &&
-            oldTransaction.to.toString() === newTransaction.to.toString() &&
-            Math.abs(oldTransaction.amount - newTransaction.amount) < 0.01,
+          (oldTransaction) => {
+            if (!oldTransaction?.from || !oldTransaction?.to) {
+              return false;
+            }
+
+            const oldFromId = oldTransaction.from?._id
+              ? oldTransaction.from._id.toString()
+              : oldTransaction.from?.toString();
+
+            const oldToId = oldTransaction.to?._id
+              ? oldTransaction.to._id.toString()
+              : oldTransaction.to?.toString();
+
+            if (!oldFromId || !oldToId) {
+              return false;
+            }
+
+            return (
+              oldFromId === newFromId &&
+              oldToId === newToId &&
+              Math.abs(
+                Number(oldTransaction.amount) - Number(newTransaction.amount),
+              ) < 0.01
+            );
+          },
         );
 
         if (oldTransaction && oldTransaction.status === "paid") {
@@ -110,9 +157,15 @@ const calculateMonthlySettlement = async (req, res) => {
       .populate("transactions.from", "name email")
       .populate("transactions.to", "name email");
 
+    /*
+     * Create notifications only for valid users.
+     *
+     * If an old member reference points to a deleted User,
+     * populate() returns null. Skip that member instead of
+     * crashing the entire settlement request.
+     */
     if (isNewSettlement) {
       for (const member of settlement.memberBalances) {
-        // Skip stale/deleted user references
         if (!member.user?._id) {
           console.warn(
             "Skipping notification for settlement member with missing user:",
@@ -138,7 +191,9 @@ const calculateMonthlySettlement = async (req, res) => {
         const parts = [];
 
         for (const transaction of outgoing) {
-          if (!transaction.to?._id) continue;
+          if (!transaction.to?._id) {
+            continue;
+          }
 
           parts.push(
             `Pay ₹${Number(transaction.amount).toFixed(2)} to ${
@@ -148,7 +203,9 @@ const calculateMonthlySettlement = async (req, res) => {
         }
 
         for (const transaction of incoming) {
-          if (!transaction.from?._id) continue;
+          if (!transaction.from?._id) {
+            continue;
+          }
 
           parts.push(
             `Receive ₹${Number(transaction.amount).toFixed(2)} from ${
@@ -260,6 +317,8 @@ const closeSettlement = async (req, res) => {
       settlement,
     });
   } catch (error) {
+    console.error("Close settlement error:", error);
+
     res.status(500).json({
       message: error.message,
     });
@@ -301,11 +360,20 @@ const markTransactionPaid = async (req, res) => {
     const receiverId =
       transaction.to?._id?.toString() || transaction.to?.toString();
 
+    if (!senderId) {
+      return res.status(400).json({
+        message: "Sender account no longer exists.",
+      });
+    }
+
     if (!receiverId) {
       return res.status(400).json({
         message: "Receiver account no longer exists.",
       });
     }
+
+    // Only the person who needs to pay
+    // can mark this transaction as paid.
     if (senderId !== userId) {
       return res.status(403).json({
         message:
