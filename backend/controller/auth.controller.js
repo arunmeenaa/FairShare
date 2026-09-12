@@ -187,7 +187,7 @@ const login = async (req, res) => {
       email: normalizedEmail,
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return res.status(401).json({
         message: "Invalid email or password",
       });

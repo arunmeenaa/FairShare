@@ -9,11 +9,16 @@ const roundMoney = (value) => {
 const getId = (value) => {
   if (!value) return "";
 
-  if (value._id) {
-    return value._id.toString();
-  }
+  try {
+    if (typeof value === "object") {
+      if (value._id) return value._id.toString();
+      if (value.id) return value.id.toString();
+    }
 
-  return value.toString();
+    return value.toString();
+  } catch {
+    return "";
+  }
 };
 
 const getMonthRange = (month, year) => {

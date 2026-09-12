@@ -6,7 +6,7 @@ const protect = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     const token =
-      req.cookies.token ||
+      req.cookies?.token ||
       (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null);
 
     if (!token) {
@@ -33,7 +33,7 @@ const protect = async (req, res, next) => {
 
     req.user = user;
 
-    next();
+    return next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
@@ -46,6 +46,8 @@ const protect = async (req, res, next) => {
         message: "Invalid token. Please login again.",
       });
     }
+
+    console.error("Authentication middleware error:", error);
 
     return res.status(500).json({
       message: "Authentication failed.",

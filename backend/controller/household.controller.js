@@ -320,13 +320,15 @@ const getHouseholdMembers = async (req, res) => {
     }).lean();
 
     const availabilityMap = new Map(
-      availabilityRecords.map((record) => [
-        record.user.toString(),
-        {
-          status: record.status || "unavailable",
-          reason: record.reason || "",
-        },
-      ]),
+      availabilityRecords
+        .filter((record) => record?.user)
+        .map((record) => [
+          record.user.toString(),
+          {
+            status: record.status || "unavailable",
+            reason: record.reason || "",
+          },
+        ]),
     );
 
     const membersWithAvailability = activeMembers.map((member) => {
@@ -384,6 +386,11 @@ const leaveHousehold = async (req, res) => {
         member.user.toString() === req.user._id.toString() &&
         member.isActive,
     );
+    if (!member) {
+      return res.status(404).json({
+        message: "Member not found in this household",
+      });
+    }
 
     if (member.role === "admin") {
       return res.status(400).json({
