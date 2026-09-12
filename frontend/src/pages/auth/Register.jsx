@@ -96,7 +96,12 @@ const Register = () => {
       };
 
       const response = await api.post("/auth/register", payload);
-
+if (response.data.token) {
+  localStorage.setItem(
+    "fairshare_token",
+    response.data.token
+  );
+}
       const createdHousehold = response.data?.household;
 
       await getCurrentUser();

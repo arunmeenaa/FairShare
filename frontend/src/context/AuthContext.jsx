@@ -37,6 +37,10 @@ export const AuthProvider = ({ children }) => {
       password,
     });
 
+    if (response.data.token) {
+      localStorage.setItem("fairshare_token", response.data.token);
+    }
+
     setUser(response.data.user);
     setHousehold(response.data.household || null);
 
@@ -59,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setHousehold(null);
 
+      localStorage.removeItem("fairshare_token");
       localStorage.removeItem("selectedHouseholdId");
     }
   };
