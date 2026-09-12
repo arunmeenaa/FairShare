@@ -112,34 +112,47 @@ const calculateMonthlySettlement = async (req, res) => {
 
     if (isNewSettlement) {
       for (const member of settlement.memberBalances) {
+        // Skip stale/deleted user references
+        if (!member.user?._id) {
+          console.warn(
+            "Skipping notification for settlement member with missing user:",
+            member.user,
+          );
+          continue;
+        }
+
         const userId = member.user._id.toString();
 
         const outgoing = settlement.transactions.filter(
           (transaction) =>
-            transaction.from._id.toString() === userId &&
+            transaction.from?._id?.toString() === userId &&
             transaction.status !== "paid",
         );
 
         const incoming = settlement.transactions.filter(
           (transaction) =>
-            transaction.to._id.toString() === userId &&
+            transaction.to?._id?.toString() === userId &&
             transaction.status !== "paid",
         );
 
         const parts = [];
 
         for (const transaction of outgoing) {
+          if (!transaction.to?._id) continue;
+
           parts.push(
             `Pay ₹${Number(transaction.amount).toFixed(2)} to ${
-              transaction.to.name
+              transaction.to.name || "a household member"
             }`,
           );
         }
 
         for (const transaction of incoming) {
+          if (!transaction.from?._id) continue;
+
           parts.push(
             `Receive ₹${Number(transaction.amount).toFixed(2)} from ${
-              transaction.from.name
+              transaction.from.name || "a household member"
             }`,
           );
         }
@@ -199,7 +212,9 @@ const closeSettlement = async (req, res) => {
 
     const admin = household.members.find(
       (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+        member.user &&
+        member.user.toString() === req.user._id.toString() &&
+        member.isActive,
     );
 
     if (!admin || admin.role !== "admin") {
@@ -286,8 +301,11 @@ const markTransactionPaid = async (req, res) => {
     const receiverId =
       transaction.to?._id?.toString() || transaction.to?.toString();
 
-    // Only the person who owes the money
-    // can mark the transaction as paid.
+    if (!receiverId) {
+      return res.status(400).json({
+        message: "Receiver account no longer exists.",
+      });
+    }
     if (senderId !== userId) {
       return res.status(403).json({
         message:
