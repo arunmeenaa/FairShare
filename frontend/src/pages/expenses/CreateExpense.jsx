@@ -109,19 +109,31 @@ const CreateExpense = () => {
 
   // Active household members
   const activeMembers = useMemo(() => {
-    return members.filter((member) => member.isActive);
+    return members.filter(
+      (member) => member.isActive === true && member.user && getId(member.user),
+    );
   }, [members]);
 
   const fetchMembers = useCallback(async () => {
-    if (!currentHousehold?._id) return;
+    if (!currentHousehold?._id) return [];
 
     try {
       setFetchingMembers(true);
       setError("");
-      const response = await api.get(`/households/${currentHousehold._id}/members`);
-      setMembers(response.data.members || []);
+
+      const response = await api.get(
+        `/households/${currentHousehold._id}/members`,
+      );
+
+      const latestMembers = response.data.members || [];
+
+      setMembers(latestMembers);
+
+      return latestMembers;
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load members");
+
+      return [];
     } finally {
       setFetchingMembers(false);
     }
@@ -156,10 +168,10 @@ const CreateExpense = () => {
         return;
       }
 
-      // 🔒 Validation: Ensure the creator is included
       if (!selectedParticipants.includes(currentUserId)) {
         const errMsg =
           "You must include yourself as a participant in your expense";
+
         setError(errMsg);
         toast.error(errMsg);
         return;
@@ -170,6 +182,8 @@ const CreateExpense = () => {
         toast.error("Please provide a reason for manual splitting");
         return;
       }
+
+      await fetchMembers();
     }
 
     try {
@@ -302,7 +316,9 @@ const CreateExpense = () => {
               <p className="text-sm font-semibold text-red-800 dark:text-red-300">
                 Something went wrong
               </p>
-              <p className="mt-0.5 text-sm text-red-600 dark:text-red-400">{error}</p>
+              <p className="mt-0.5 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </p>
             </div>
           </div>
         )}
@@ -327,7 +343,9 @@ const CreateExpense = () => {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Expense Details</h2>
+                <h2 className="text-lg font-bold text-white">
+                  Expense Details
+                </h2>
                 <p className="text-sm text-indigo-200">
                   Fill out the parameters for this bill
                 </p>
@@ -451,15 +469,16 @@ const CreateExpense = () => {
 
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Always get the latest household members before manual selection
+                    await fetchMembers();
+
                     setForm((prev) => ({
                       ...prev,
                       participantMode: "manual",
                     }));
-                    if (
-                      currentUserId &&
-                      !selectedParticipants.includes(currentUserId)
-                    ) {
+
+                    if (currentUserId) {
                       setSelectedParticipants([currentUserId]);
                     }
                   }}
@@ -487,15 +506,16 @@ const CreateExpense = () => {
                 </div>
 
                 {fetchingMembers ? (
-                  <p className="py-2 text-xs text-slate-400 dark:text-slate-500">Loading members...</p>
+                  <p className="py-2 text-xs text-slate-400 dark:text-slate-500">
+                    Loading members...
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     {activeMembers.map((member) => {
-                      const userId = getId(member.user) || getId(member);
-                      const memberName = resolveMemberName(
-                        member.user || member,
-                        members,
-                      );
+                      const userId = getId(member.user);
+
+                      const memberName = member.user?.name || "Unknown Member";
+
                       const isSelected = selectedParticipants.includes(userId);
 
                       return (
@@ -513,9 +533,11 @@ const CreateExpense = () => {
                             onChange={() => toggleParticipant(userId)}
                             className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
+
                           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
                             {getInitial(memberName)}
                           </div>
+
                           <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                             {memberName}
                           </span>
