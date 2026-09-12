@@ -304,14 +304,10 @@ const getHouseholdMembers = async (req, res) => {
 
     const isAdmin = currentMember?.role === "admin";
 
-    const activeMembers = validMembers.filter(
-      (member) => member.isActive,
-    );
+    const activeMembers = validMembers.filter((member) => member.isActive);
 
     // Get availability for all active household members
-    const userIds = activeMembers.map(
-      (member) => member.user._id,
-    );
+    const userIds = activeMembers.map((member) => member.user._id);
 
     const availabilityRecords = await Availability.find({
       household: householdId,
@@ -329,9 +325,7 @@ const getHouseholdMembers = async (req, res) => {
     );
 
     const membersWithAvailability = activeMembers.map((member) => {
-      const availability = availabilityMap.get(
-        member.user._id.toString(),
-      );
+      const availability = availabilityMap.get(member.user._id.toString());
 
       return {
         _id: member._id,
@@ -341,11 +335,9 @@ const getHouseholdMembers = async (req, res) => {
         isActive: member.isActive,
         groceryParticipant: member.groceryParticipant ?? true,
 
-        availabilityStatus:
-          availability?.status || "available",
+        availabilityStatus: availability?.status || "available",
 
-        availabilityReason:
-          availability?.reason || "",
+        availabilityReason: availability?.reason || "",
       };
     });
 
@@ -420,7 +412,9 @@ const removeMember = async (req, res) => {
 
     const admin = household.members.find(
       (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+        member.user &&
+        member.user.toString() === req.user._id.toString() &&
+        member.isActive,
     );
 
     if (!admin || admin.role !== "admin") {
@@ -430,7 +424,8 @@ const removeMember = async (req, res) => {
     }
 
     const member = household.members.find(
-      (member) => member.user.toString() === userId && member.isActive,
+      (member) =>
+        member.user && member.user.toString() === userId && member.isActive,
     );
 
     if (!member) {

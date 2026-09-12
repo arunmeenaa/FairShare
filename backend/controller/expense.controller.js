@@ -122,14 +122,16 @@ const createExpense = async (req, res) => {
           isActive: true,
         },
       },
-    });
+    }).populate("members.user", "name email");
 
     if (!household) {
       return res.status(404).json({
         message: "Household not found or you are not a member",
       });
     }
-
+    const activeMembers = household.members.filter(
+      (member) => member.isActive === true && member.user,
+    );
     try {
       await ensureMonthIsOpen({
         householdId,
@@ -182,12 +184,12 @@ const createExpense = async (req, res) => {
         });
       }
 
+      // Only active members whose User document exists
       const activeMemberIds = new Set(
-        household.members
-          .filter((member) => member.isActive)
-          .map((member) => member.user.toString()),
+        activeMembers.map((member) => member.user._id.toString()),
       );
 
+      // Make sure every selected participant is currently active
       const invalidParticipant = uniqueParticipants.find(
         (userId) => !activeMemberIds.has(userId),
       );
@@ -198,20 +200,18 @@ const createExpense = async (req, res) => {
         });
       }
 
-      eligibleMembers = household.members.filter(
-        (member) =>
-          member.isActive &&
-          uniqueParticipants.includes(member.user.toString()),
+      // Selected participants
+      eligibleMembers = activeMembers.filter((member) =>
+        uniqueParticipants.includes(member.user._id.toString()),
       );
 
-      excludedMembers = household.members
+      // Unselected active members
+      excludedMembers = activeMembers
         .filter(
-          (member) =>
-            member.isActive &&
-            !uniqueParticipants.includes(member.user.toString()),
+          (member) => !uniqueParticipants.includes(member.user._id.toString()),
         )
         .map((member) => ({
-          user: member.user,
+          user: member.user._id,
           reason: "Not selected for this expense",
           status: "excluded",
         }));
