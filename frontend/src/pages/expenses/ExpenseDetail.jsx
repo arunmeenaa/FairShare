@@ -4,10 +4,6 @@ import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useHousehold } from "../../context/HouseholdContext";
 
-// ==========================================
-// UTILITIES & HELPERS
-// ==========================================
-
 const formatCurrency = (value) => {
   return `₹${Number(value || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
@@ -62,10 +58,6 @@ const CATEGORY_ICONS = {
   other: "💳",
 };
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
-
 const ExpenseDetail = () => {
   const { expenseId } = useParams();
   const { currentHousehold } = useHousehold();
@@ -77,6 +69,14 @@ const ExpenseDetail = () => {
   const [error, setError] = useState("");
 
   const householdId = currentHousehold?._id;
+  const activeMemberIds = useMemo(() => {
+    return new Set(
+      (currentHousehold?.members || [])
+        .filter((member) => member.isActive !== false)
+        .map((member) => getId(member.user))
+        .filter(Boolean),
+    );
+  }, [currentHousehold]);
 
   const fetchExpense = useCallback(async () => {
     if (!householdId || !expenseId) {
@@ -88,17 +88,13 @@ const ExpenseDetail = () => {
       setLoading(true);
       setError("");
 
-      const response = await api.get(
-        `/expenses/${householdId}/${expenseId}`,
-      );
+      const response = await api.get(`/expenses/${householdId}/${expenseId}`);
 
       setExpense(response.data.expense);
     } catch (err) {
       console.error("Failed to load expense:", err);
 
-      setError(
-        err.response?.data?.message || "Failed to load expense",
-      );
+      setError(err.response?.data?.message || "Failed to load expense");
     } finally {
       setLoading(false);
     }
@@ -152,24 +148,20 @@ const ExpenseDetail = () => {
   const allMembers = useMemo(() => {
     if (!expense) return [];
 
-    const participants = (expense.participants || []).map(
-      (participant) => ({
-        user: participant.user,
-        share: participant.share,
-        type: "participant",
-        availabilityStatus: participant.availabilityStatus,
-      }),
-    );
+    const participants = (expense.participants || []).map((participant) => ({
+      user: participant.user,
+      share: participant.share,
+      type: "participant",
+      availabilityStatus: participant.availabilityStatus,
+    }));
 
-    const excluded = (expense.excludedMembers || []).map(
-      (member) => ({
-        user: member.user,
-        share: 0,
-        type: "excluded",
-        availabilityStatus: member.status,
-        reason: member.reason,
-      }),
-    );
+    const excluded = (expense.excludedMembers || []).map((member) => ({
+      user: member.user,
+      share: 0,
+      type: "excluded",
+      availabilityStatus: member.status,
+      reason: member.reason,
+    }));
 
     return [...participants, ...excluded];
   }, [expense]);
@@ -247,7 +239,6 @@ const ExpenseDetail = () => {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-
               Back to Expenses
             </button>
           </div>
@@ -284,8 +275,7 @@ const ExpenseDetail = () => {
             </h2>
 
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              This expense may have been deleted or is no longer
-              available.
+              This expense may have been deleted or is no longer available.
             </p>
 
             <Link
@@ -305,7 +295,6 @@ const ExpenseDetail = () => {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-
               Back to Expenses
             </Link>
           </div>
@@ -317,8 +306,7 @@ const ExpenseDetail = () => {
   const paidByName = expense.paidBy?.name || "Unknown Member";
   const payerId = getId(expense.paidBy);
 
-  const categoryIcon =
-    CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
+  const categoryIcon = CATEGORY_ICONS[expense.category?.toLowerCase()] || "💳";
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-6 pb-28 transition-colors duration-300 sm:px-6 lg:px-8 lg:pb-8 dark:bg-slate-950">
@@ -344,7 +332,6 @@ const ExpenseDetail = () => {
                   d="M15 19l-7-7 7-7"
                 />
               </svg>
-
               Back to expenses
             </Link>
 
@@ -381,7 +368,6 @@ const ExpenseDetail = () => {
                     d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
                   />
                 </svg>
-
                 Downloading...
               </>
             ) : (
@@ -399,7 +385,6 @@ const ExpenseDetail = () => {
                     d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
                   />
                 </svg>
-
                 Download Receipt
               </>
             )}
@@ -516,8 +501,7 @@ const ExpenseDetail = () => {
                 </h2>
 
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                  Breakdown of shares and away members for this
-                  transaction.
+                  Breakdown of shares and away members for this transaction.
                 </p>
               </div>
 
@@ -544,9 +528,11 @@ const ExpenseDetail = () => {
                   const name = member.user?.name || "Unknown Member";
                   const memberUserId = getId(member.user);
 
+                  const isFormerMember =
+                    Boolean(memberUserId) && !activeMemberIds.has(memberUserId);
+
                   const isPayer =
-                    member.type === "participant" &&
-                    memberUserId === payerId;
+                    member.type === "participant" && memberUserId === payerId;
 
                   return (
                     <div
@@ -569,9 +555,17 @@ const ExpenseDetail = () => {
                         </div>
 
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-slate-900 dark:text-slate-100">
-                            {name}
-                          </p>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <p className="truncate font-medium text-slate-900 dark:text-slate-100">
+                              {name}
+                            </p>
+
+                            {isFormerMember && (
+                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                Former Member
+                              </span>
+                            )}
+                          </div>
 
                           <div className="mt-1 flex flex-wrap items-center gap-2">
                             {isPayer && (
@@ -580,12 +574,11 @@ const ExpenseDetail = () => {
                               </span>
                             )}
 
-                            {member.type === "participant" &&
-                              !isPayer && (
-                                <span className="text-xs text-slate-400 dark:text-slate-500">
-                                  Participant
-                                </span>
-                              )}
+                            {member.type === "participant" && !isPayer && (
+                              <span className="text-xs text-slate-400 dark:text-slate-500">
+                                Participant
+                              </span>
+                            )}
 
                             {member.type === "excluded" && (
                               <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
@@ -598,12 +591,11 @@ const ExpenseDetail = () => {
                             )}
                           </div>
 
-                          {member.type === "excluded" &&
-                            member.reason && (
-                              <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-300/80">
-                                Reason: {member.reason}
-                              </p>
-                            )}
+                          {member.type === "excluded" && member.reason && (
+                            <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-300/80">
+                              Reason: {member.reason}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -657,8 +649,8 @@ const ExpenseDetail = () => {
           </svg>
 
           <p className="text-xs leading-5 text-slate-400 dark:text-slate-500">
-            This expense is calculated and settled using FairShare's
-            automated split engine.
+            This expense is calculated and settled using FairShare's automated
+            split engine.
           </p>
         </div>
       </div>

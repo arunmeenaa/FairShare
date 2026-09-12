@@ -16,12 +16,12 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
       setHousehold(response.data.household || null);
     } catch (error) {
-      if (error.response?.status !== 401) {
+      if (error.response?.status === 401) {
+        setUser(null);
+        setHousehold(null);
+      } else {
         console.error("Failed to get current user:", error);
       }
-
-      setUser(null);
-      setHousehold(null);
     } finally {
       setLoading(false);
     }
