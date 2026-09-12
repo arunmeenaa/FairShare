@@ -15,16 +15,20 @@ const getEligibleParticipants = async ({
     throw new Error("Household not found");
   }
 
-  const activeMembers = household.members.filter((member) => member.isActive);
+  // Only active members with a valid User document
+  const activeMembers = household.members.filter(
+    (member) => member.isActive === true && member.user,
+  );
 
   let participants = [...activeMembers];
-
   const excludedMembers = [];
 
-  // Grocery-specific rule
+  // ==========================================
+  // GROCERY PARTICIPATION
+  // ==========================================
   if (category === "grocery") {
     const groceryExcluded = participants.filter(
-      (member) => !member.groceryParticipant,
+      (member) => member.groceryParticipant === false,
     );
 
     groceryExcluded.forEach((member) => {
@@ -34,10 +38,15 @@ const getEligibleParticipants = async ({
       });
     });
 
-    participants = participants.filter((member) => member.groceryParticipant);
+    participants = participants.filter(
+      (member) => member.groceryParticipant !== false,
+    );
   }
 
-  // Vacation rule applies only to groceries
+  // ==========================================
+  // AWAY / VACATION RULE
+  // Only applies to grocery expenses
+  // ==========================================
   if (category === "grocery" && participants.length > 0) {
     const userIds = participants.map((member) => member.user._id);
 
