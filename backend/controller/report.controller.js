@@ -447,12 +447,6 @@ const generateHouseholdReceipt = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Authorization
-    |--------------------------------------------------------------------------
-    */
-
     const household = await Household.findOne({
       _id: householdId,
       members: {
@@ -469,12 +463,6 @@ const generateHouseholdReceipt = async (req, res) => {
       });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CENTRAL MONTHLY CALCULATION
-    |--------------------------------------------------------------------------
-    */
-
     const summary = await calculateMonthSummary({
       householdId,
       month: monthNumber,
@@ -485,23 +473,11 @@ const generateHouseholdReceipt = async (req, res) => {
 
     const transactions = summary.transactions;
 
-    /*
-    |--------------------------------------------------------------------------
-    | Existing settlement snapshot
-    |--------------------------------------------------------------------------
-    */
-
     const settlement = await Settlement.findOne({
       household: householdId,
       month: monthNumber,
       year: yearNumber,
     });
-
-    /*
-    |--------------------------------------------------------------------------
-    | PDF Headers
-    |--------------------------------------------------------------------------
-    */
 
     sendPdfHeaders(
       res,
@@ -512,12 +488,6 @@ const generateHouseholdReceipt = async (req, res) => {
     );
 
     const doc = createPdf(res);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Header
-    |--------------------------------------------------------------------------
-    */
 
     drawDocumentHeader(doc, {
       title: "Household Monthly Statement",
@@ -549,16 +519,14 @@ const generateHouseholdReceipt = async (req, res) => {
       {
         label: "ACTIVE MEMBERS",
         value: String(
-          household.members.filter((member) => member.isActive).length,
+          String(
+            household.members.filter(
+              (member) => member.isActive === true && member.user,
+            ).length,
+          ),
         ),
       },
     ]);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Member Balances
-    |--------------------------------------------------------------------------
-    */
 
     sectionTitle(doc, "MEMBER BALANCES & SHARES");
 

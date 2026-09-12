@@ -67,7 +67,8 @@ const joinHousehold = async (req, res) => {
     }
 
     const existingMember = household.members.find(
-      (member) => member.user.toString() === req.user._id.toString(),
+      (member) =>
+        member.user && member.user.toString() === req.user._id.toString(),
     );
 
     if (existingMember) {
@@ -181,6 +182,7 @@ const getHousehold = async (req, res) => {
 
     const currentMember = household.members.find(
       (member) =>
+        member.user &&
         member.user._id.toString() === req.user._id.toString() &&
         member.isActive,
     );
@@ -227,7 +229,9 @@ const updateGroceryParticipation = async (req, res) => {
 
     const admin = household.members.find(
       (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+        member.user &&
+        member.user.toString() === req.user._id.toString() &&
+        member.isActive,
     );
 
     if (!admin || admin.role !== "admin") {
@@ -237,7 +241,8 @@ const updateGroceryParticipation = async (req, res) => {
     }
 
     const member = household.members.find(
-      (member) => member.user.toString() === userId && member.isActive,
+      (member) =>
+        member.user && member.user.toString() === userId && member.isActive,
     );
 
     if (!member) {
@@ -375,7 +380,9 @@ const leaveHousehold = async (req, res) => {
 
     const member = household.members.find(
       (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+        member.user &&
+        member.user.toString() === req.user._id.toString() &&
+        member.isActive,
     );
 
     if (member.role === "admin") {
@@ -475,7 +482,9 @@ const regenerateInviteCode = async (req, res) => {
 
     const admin = household.members.find(
       (member) =>
-        member.user.toString() === req.user._id.toString() && member.isActive,
+        member.user &&
+        member.user.toString() === req.user._id.toString() &&
+        member.isActive,
     );
 
     if (!admin || admin.role !== "admin") {

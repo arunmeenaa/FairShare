@@ -1,6 +1,26 @@
 const Household = require("../model/household.model");
 const Availability = require("../model/availability.model");
 
+const safeObjectIdString = (value) => {
+  if (!value) return null;
+
+  try {
+    if (typeof value === "object") {
+      if (value._id) {
+        return value._id.toString();
+      }
+
+      if (value.id) {
+        return value.id.toString();
+      }
+    }
+
+    return value.toString();
+  } catch {
+    return null;
+  }
+};
+
 const getEligibleParticipants = async ({
   householdId,
   category,
@@ -17,24 +37,24 @@ const getEligibleParticipants = async ({
 
   // Only active members with a valid User document
   const activeMembers = household.members.filter(
-    (member) => member.isActive === true && member.user,
+    (member) => member?.isActive === true && member?.user,
   );
 
   let participants = [...activeMembers];
   const excludedMembers = [];
 
-  // ==========================================
-  // GROCERY PARTICIPATION
-  // ==========================================
   if (category === "grocery") {
     const groceryExcluded = participants.filter(
       (member) => member.groceryParticipant === false,
     );
 
     groceryExcluded.forEach((member) => {
+      if (!member?.user) return;
+
       excludedMembers.push({
         user: member.user,
         reason: "Not a grocery participant",
+        status: "excluded",
       });
     });
 
@@ -43,37 +63,47 @@ const getEligibleParticipants = async ({
     );
   }
 
-  // ==========================================
-  // AWAY / VACATION RULE
-  // Only applies to grocery expenses
-  // ==========================================
   if (category === "grocery" && participants.length > 0) {
-    const userIds = participants.map((member) => member.user._id);
+    const userIds = participants
+      .map((member) => safeObjectIdString(member?.user))
+      .filter(Boolean);
 
-    const awayMembers = await Availability.find({
-      household: householdId,
-      user: { $in: userIds },
-      status: "away",
-    });
-
-    const awayUserIds = new Set(
-      awayMembers.map((item) => item.user.toString()),
-    );
-
-    const vacationExcluded = participants.filter((member) =>
-      awayUserIds.has(member.user._id.toString()),
-    );
-
-    vacationExcluded.forEach((member) => {
-      excludedMembers.push({
-        user: member.user,
-        reason: "On vacation",
+    if (userIds.length > 0) {
+      const awayMembers = await Availability.find({
+        household: householdId,
+        user: { $in: userIds },
+        status: "away",
       });
-    });
 
-    participants = participants.filter(
-      (member) => !awayUserIds.has(member.user._id.toString()),
-    );
+      // Ignore stale Availability documents with missing user refs
+      const awayUserIds = new Set(
+        awayMembers
+          .map((item) => safeObjectIdString(item?.user))
+          .filter(Boolean),
+      );
+
+      const vacationExcluded = participants.filter((member) => {
+        const memberUserId = safeObjectIdString(member?.user);
+
+        return memberUserId && awayUserIds.has(memberUserId);
+      });
+
+      vacationExcluded.forEach((member) => {
+        if (!member?.user) return;
+
+        excludedMembers.push({
+          user: member.user,
+          reason: "On vacation",
+          status: "away",
+        });
+      });
+
+      participants = participants.filter((member) => {
+        const memberUserId = safeObjectIdString(member?.user);
+
+        return memberUserId && !awayUserIds.has(memberUserId);
+      });
+    }
   }
 
   return {

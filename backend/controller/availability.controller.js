@@ -1,8 +1,27 @@
 const Availability = require("../model/availability.model");
 const Household = require("../model/household.model");
-const { createNotification } = require("../services/notification.service");
 const { notifyHousehold } = require("../services/notification.service");
 const { sendAvailabilityEmail } = require("../services/email.service");
+
+const safeObjectIdString = (value) => {
+  if (!value) return null;
+
+  try {
+    if (typeof value === "object") {
+      if (value._id) {
+        return value._id.toString();
+      }
+
+      if (value.id) {
+        return value.id.toString();
+      }
+    }
+
+    return value.toString();
+  } catch {
+    return null;
+  }
+};
 
 const getAvailability = async (req, res) => {
   try {
@@ -42,13 +61,15 @@ const getAvailability = async (req, res) => {
       },
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       availability: availability || {
         status: "available",
       },
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Get availability error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -97,11 +118,16 @@ const updateAvailability = async (req, res) => {
         setDefaultsOnInsert: true,
       },
     );
-    const member = household.members.find(
-      (member) =>
-        member.user._id.toString() === req.user._id.toString() &&
-        member.isActive,
-    );
+
+    const currentUserId = safeObjectIdString(req.user._id);
+
+    const member = household.members.find((member) => {
+      if (!member?.isActive || !member?.user) {
+        return false;
+      }
+
+      return safeObjectIdString(member.user) === currentUserId;
+    });
 
     const userName = member?.user?.name || "A household member";
 
@@ -122,37 +148,48 @@ const updateAvailability = async (req, res) => {
       },
       excludeUserId: req.user._id,
     });
-    const otherMembers = household.members.filter(
-      (member) =>
-        member.isActive && member.user.toString() !== req.user._id.toString(),
-    );
+
     const populatedHousehold = await Household.findById(householdId).populate(
       "members.user",
       "name email",
     );
-    for (const member of populatedHousehold.members) {
-      if (
-        !member.isActive ||
-        !member.user ||
-        member.user._id.toString() === req.user._id.toString()
-      ) {
-        continue;
-      }
 
-      sendAvailabilityEmail({
-        recipient: member.user,
-        memberName: userName,
-        status,
-      }).catch((error) => {
-        console.error("Availability email failed:", error.message);
-      });
+    if (populatedHousehold) {
+      for (const householdMember of populatedHousehold.members || []) {
+        // Ignore inactive members and stale/deleted users
+        if (!householdMember?.isActive || !householdMember?.user?._id) {
+          continue;
+        }
+
+        const memberUserId = safeObjectIdString(householdMember.user);
+
+        if (!memberUserId) {
+          continue;
+        }
+
+        // Don't email the person who changed their own status
+        if (memberUserId === currentUserId) {
+          continue;
+        }
+
+        sendAvailabilityEmail({
+          recipient: householdMember.user,
+          memberName: userName,
+          status,
+        }).catch((error) => {
+          console.error("Availability email failed:", error.message);
+        });
+      }
     }
-    res.status(200).json({
+
+    return res.status(200).json({
       message: `Availability changed to ${status}`,
       availability,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Update availability error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -176,17 +213,23 @@ const deleteAvailability = async (req, res) => {
 
     await availability.deleteOne();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Availability removed successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete availability error:", error);
+
+    return res.status(500).json({
       message: error.message,
     });
   }
 };
 
 const isUserAway = async ({ householdId, userId }) => {
+  if (!householdId || !userId) {
+    return false;
+  }
+
   const availability = await Availability.findOne({
     household: householdId,
     user: userId,
@@ -194,6 +237,7 @@ const isUserAway = async ({ householdId, userId }) => {
 
   return availability?.status === "away";
 };
+
 module.exports = {
   getAvailability,
   updateAvailability,

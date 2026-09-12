@@ -2,7 +2,6 @@ const Expense = require("../model/expense.model");
 const Household = require("../model/household.model");
 const Settlement = require("../model/settlement.model");
 
-
 const roundMoney = (value) => {
   return Math.round(Number(value || 0) * 100) / 100;
 };
@@ -39,27 +38,12 @@ const getMonthRange = (month, year) => {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Monthly Expenses
-|--------------------------------------------------------------------------
-|
-| This is the important part of the monthly system.
-|
-| Expenses remain permanently stored.
-| We only select the expenses belonging to the requested
-| calendar month.
-|
-*/
-
 const getMonthlyExpenses = async ({ householdId, month, year }) => {
   const { startDate, endDate } = getMonthRange(month, year);
 
   return Expense.find({
     household: householdId,
-
     isDeleted: false,
-
     date: {
       $gte: startDate,
       $lt: endDate,
@@ -73,23 +57,17 @@ const getMonthlyExpenses = async ({ householdId, month, year }) => {
     });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Build Member Balances
-|--------------------------------------------------------------------------
-*/
-
 const calculateMemberBalances = (household, expenses) => {
   const balances = new Map();
 
-  /*
-   * Only active household members participate
-   * in monthly balance calculations.
-   */
   household.members
-    .filter((member) => member.isActive)
+    .filter((member) => member.isActive === true && member.user)
     .forEach((member) => {
       const userId = getId(member.user);
+
+      if (!userId) {
+        return;
+      }
 
       balances.set(userId, {
         user: member.user,
@@ -105,7 +83,11 @@ const calculateMemberBalances = (household, expenses) => {
   for (const expense of expenses) {
     const payerId = getId(expense.paidBy);
 
-    if (balances.has(payerId)) {
+    /*
+     * Ignore expenses whose payer no longer exists
+     * or is not an active household member.
+     */
+    if (payerId && balances.has(payerId)) {
       balances.get(payerId).paid += Number(expense.amount);
     }
 
@@ -118,7 +100,10 @@ const calculateMemberBalances = (household, expenses) => {
     for (const participant of expense.participants || []) {
       const userId = getId(participant.user);
 
-      if (balances.has(userId)) {
+      /*
+       * Ignore stale participant references.
+       */
+      if (userId && balances.has(userId)) {
         balances.get(userId).share += Number(participant.share);
       }
     }
@@ -127,8 +112,8 @@ const calculateMemberBalances = (household, expenses) => {
   /*
    * Final monthly balance:
    *
-   * positive  = person should receive money
-   * negative  = person needs to pay money
+   * positive = person should receive money
+   * negative = person needs to pay money
    */
   balances.forEach((member) => {
     member.paid = roundMoney(member.paid);
@@ -141,35 +126,20 @@ const calculateMemberBalances = (household, expenses) => {
   return Array.from(balances.values());
 };
 
-/*
-|--------------------------------------------------------------------------
-| Generate Transactions
-|--------------------------------------------------------------------------
-|
-| Converts:
-|
-| Arun   +₹700
-| Piyush -₹400
-| Naveen -₹300
-|
-| into:
-|
-| Piyush → Arun  ₹400
-| Naveen → Arun  ₹300
-|
-|--------------------------------------------------------------------------
-*/
-
 const generateTransactions = (memberBalances) => {
   const creditors = memberBalances
-    .filter((member) => member.balance > 0.01)
+    .filter(
+      (member) => member.user && getId(member.user) && member.balance > 0.01,
+    )
     .map((member) => ({
       user: member.user,
       amount: roundMoney(member.balance),
     }));
 
   const debtors = memberBalances
-    .filter((member) => member.balance < -0.01)
+    .filter(
+      (member) => member.user && getId(member.user) && member.balance < -0.01,
+    )
     .map((member) => ({
       user: member.user,
       amount: roundMoney(Math.abs(member.balance)),
@@ -184,6 +154,14 @@ const generateTransactions = (memberBalances) => {
     const creditor = creditors[creditorIndex];
 
     const debtor = debtors[debtorIndex];
+
+    /*
+     * Safety check in case a stale user somehow
+     * reaches this point.
+     */
+    if (!creditor?.user || !debtor?.user) {
+      break;
+    }
 
     const amount = roundMoney(Math.min(creditor.amount, debtor.amount));
 
@@ -213,22 +191,6 @@ const generateTransactions = (memberBalances) => {
 
   return transactions;
 };
-
-/*
-|--------------------------------------------------------------------------
-| CENTRAL MONTHLY CALCULATION
-|--------------------------------------------------------------------------
-|
-| This is now the main calculation engine for FairShare.
-|
-| Dashboard
-| Settlement
-| Reports
-| Monthly receipts
-|
-| should all use this function.
-|
-*/
 
 const calculateMonthSummary = async ({ householdId, month, year }) => {
   const household = await Household.findOne({
@@ -304,15 +266,6 @@ const calculateMonthSummary = async ({ householdId, month, year }) => {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| Existing calculateSettlement
-|--------------------------------------------------------------------------
-|
-| Kept so your existing controllers continue working.
-|
-*/
-
 const calculateSettlement = async ({ householdId, month, year }) => {
   const summary = await calculateMonthSummary({
     householdId,
@@ -326,15 +279,6 @@ const calculateSettlement = async ({ householdId, month, year }) => {
     memberBalances: summary.memberBalances,
   };
 };
-
-/*
-|--------------------------------------------------------------------------
-| Weekly Settlement
-|--------------------------------------------------------------------------
-|
-| Kept for your weekly email job.
-|
-*/
 
 const calculateWeeklySettlement = async ({
   householdId,
@@ -352,14 +296,14 @@ const calculateWeeklySettlement = async ({
 
   const expenses = await Expense.find({
     household: householdId,
-
     isDeleted: false,
-
     date: {
       $gte: startDate,
       $lt: endDate,
     },
-  });
+  })
+    .populate("paidBy", "name email")
+    .populate("participants.user", "name email");
 
   const memberBalances = calculateMemberBalances(household, expenses);
 
@@ -382,8 +326,6 @@ const calculateWeeklySettlement = async ({
 };
 
 const refreshOpenMonthlySettlement = async ({ householdId, month, year }) => {
-  const Settlement = require("../model/settlement.model");
-
   const existingSettlement = await Settlement.findOne({
     household: householdId,
     month,
@@ -412,13 +354,40 @@ const refreshOpenMonthlySettlement = async ({ householdId, month, year }) => {
    */
   if (existingSettlement) {
     transactions = summary.transactions.map((newTransaction) => {
+      if (!newTransaction?.from || !newTransaction?.to) {
+        return newTransaction;
+      }
+
+      const newFromId = getId(newTransaction.from);
+
+      const newToId = getId(newTransaction.to);
+
+      if (!newFromId || !newToId) {
+        return newTransaction;
+      }
+
       const oldTransaction = existingSettlement.transactions.find(
-        (oldTransaction) =>
-          getId(oldTransaction.from) === getId(newTransaction.from) &&
-          getId(oldTransaction.to) === getId(newTransaction.to) &&
-          Math.abs(
-            Number(oldTransaction.amount) - Number(newTransaction.amount),
-          ) < 0.01,
+        (oldTransaction) => {
+          if (!oldTransaction?.from || !oldTransaction?.to) {
+            return false;
+          }
+
+          const oldFromId = getId(oldTransaction.from);
+
+          const oldToId = getId(oldTransaction.to);
+
+          if (!oldFromId || !oldToId) {
+            return false;
+          }
+
+          return (
+            oldFromId === newFromId &&
+            oldToId === newToId &&
+            Math.abs(
+              Number(oldTransaction.amount) - Number(newTransaction.amount),
+            ) < 0.01
+          );
+        },
       );
 
       if (oldTransaction && oldTransaction.status === "paid") {
@@ -455,6 +424,7 @@ const refreshOpenMonthlySettlement = async ({ householdId, month, year }) => {
     },
   );
 };
+
 module.exports = {
   getMonthlyExpenses,
   calculateMemberBalances,
