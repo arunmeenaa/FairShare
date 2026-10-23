@@ -21,6 +21,7 @@ const safeObjectIdString = (value) => {
   }
 };
 
+
 const getEligibleParticipants = async ({
   householdId,
   category,
@@ -43,6 +44,7 @@ const getEligibleParticipants = async ({
   let participants = [...activeMembers];
   const excludedMembers = [];
 
+  // Grocery participation rule: only for grocery expenses
   if (category === "grocery") {
     const groceryExcluded = participants.filter(
       (member) => member.groceryParticipant === false,
@@ -52,9 +54,8 @@ const getEligibleParticipants = async ({
       if (!member?.user) return;
 
       excludedMembers.push({
-        user: member.user,
+        user: member.user._id,
         reason: "Not a grocery participant",
-        status: "excluded",
       });
     });
 
@@ -63,7 +64,8 @@ const getEligibleParticipants = async ({
     );
   }
 
-  if (category === "grocery" && participants.length > 0) {
+  // Away rule: applies to ALL expense categories
+  if (participants.length > 0) {
     const userIds = participants
       .map((member) => safeObjectIdString(member?.user))
       .filter(Boolean);
@@ -73,9 +75,8 @@ const getEligibleParticipants = async ({
         household: householdId,
         user: { $in: userIds },
         status: "away",
-      });
+      }).select("user");
 
-      // Ignore stale Availability documents with missing user refs
       const awayUserIds = new Set(
         awayMembers
           .map((item) => safeObjectIdString(item?.user))
@@ -84,23 +85,20 @@ const getEligibleParticipants = async ({
 
       const vacationExcluded = participants.filter((member) => {
         const memberUserId = safeObjectIdString(member?.user);
-
         return memberUserId && awayUserIds.has(memberUserId);
       });
 
       vacationExcluded.forEach((member) => {
-        if (!member?.user) return;
+        if (!member?.user?._id) return;
 
         excludedMembers.push({
-          user: member.user,
+          user: member.user._id,
           reason: "On vacation",
-          status: "away",
         });
       });
 
       participants = participants.filter((member) => {
         const memberUserId = safeObjectIdString(member?.user);
-
         return memberUserId && !awayUserIds.has(memberUserId);
       });
     }
@@ -111,6 +109,7 @@ const getEligibleParticipants = async ({
     excludedMembers,
   };
 };
+
 
 module.exports = {
   getEligibleParticipants,

@@ -8,6 +8,7 @@ const {
   sendNewExpenseEmail,
   sendExpenseUpdatedEmail,
 } = require("../services/email.service");
+
 const { isUserAway } = require("../controller/availability.controller");
 const Availability = require("../model/availability.model");
 const {

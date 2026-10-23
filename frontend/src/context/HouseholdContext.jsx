@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import api from "../services/api";
 import { useAuth } from "./AuthContext";
@@ -12,20 +6,14 @@ import { useAuth } from "./AuthContext";
 const HouseholdContext = createContext(null);
 
 export const HouseholdProvider = ({ children }) => {
-  const {
-    user,
-    household: authHousehold,
-    loading: authLoading,
-  } = useAuth();
+  const { user, household: authHousehold, loading: authLoading } = useAuth();
 
   const [households, setHouseholds] = useState([]);
 
-  // Start with household from AuthContext if available
   const [currentHousehold, setCurrentHousehold] = useState(
-    authHousehold || null
+    authHousehold || null,
   );
 
-  // Household cannot be considered resolved until auth + household request finish
   const [loading, setLoading] = useState(true);
 
   const requestIdRef = useRef(0);
@@ -56,14 +44,10 @@ export const HouseholdProvider = ({ children }) => {
 
       setHouseholds(data);
 
-      // --------------------------------------------------
-      // 1. Preferred household
-      // --------------------------------------------------
       if (preferredHouseholdId) {
         const preferredHousehold = data.find(
           (household) =>
-            household?._id?.toString() ===
-            preferredHouseholdId.toString()
+            household?._id?.toString() === preferredHouseholdId.toString(),
         );
 
         if (preferredHousehold) {
@@ -71,25 +55,19 @@ export const HouseholdProvider = ({ children }) => {
 
           localStorage.setItem(
             "selectedHouseholdId",
-            preferredHousehold._id.toString()
+            preferredHousehold._id.toString(),
           );
 
           return data;
         }
       }
 
-      // --------------------------------------------------
-      // 2. Previously selected household
-      // --------------------------------------------------
-      const savedHouseholdId = localStorage.getItem(
-        "selectedHouseholdId"
-      );
+      const savedHouseholdId = localStorage.getItem("selectedHouseholdId");
 
       if (savedHouseholdId) {
         const savedHousehold = data.find(
           (household) =>
-            household?._id?.toString() ===
-            savedHouseholdId.toString()
+            household?._id?.toString() === savedHouseholdId.toString(),
         );
 
         if (savedHousehold) {
@@ -98,14 +76,10 @@ export const HouseholdProvider = ({ children }) => {
         }
       }
 
-      // --------------------------------------------------
-      // 3. AuthContext household
-      // --------------------------------------------------
       if (authHousehold?._id) {
         const authenticatedHousehold = data.find(
           (household) =>
-            household?._id?.toString() ===
-            authHousehold._id.toString()
+            household?._id?.toString() === authHousehold._id.toString(),
         );
 
         if (authenticatedHousehold) {
@@ -113,24 +87,18 @@ export const HouseholdProvider = ({ children }) => {
 
           localStorage.setItem(
             "selectedHouseholdId",
-            authenticatedHousehold._id.toString()
+            authenticatedHousehold._id.toString(),
           );
 
           return data;
         }
       }
 
-      // --------------------------------------------------
-      // 4. First available household
-      // --------------------------------------------------
       if (data.length > 0) {
         setCurrentHousehold(data[0]);
 
         if (data[0]?._id) {
-          localStorage.setItem(
-            "selectedHouseholdId",
-            data[0]._id.toString()
-          );
+          localStorage.setItem("selectedHouseholdId", data[0]._id.toString());
         }
       } else {
         setCurrentHousehold(null);
@@ -140,15 +108,6 @@ export const HouseholdProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error("Failed to fetch households:", error);
-
-      /*
-       * IMPORTANT:
-       * Do NOT clear currentHousehold here.
-       *
-       * If /my-households temporarily fails but /auth/me
-       * already told us the user belongs to a household,
-       * keep that household instead of showing Create/Join.
-       */
 
       if (requestId === requestIdRef.current) {
         if (authHousehold?._id) {
@@ -184,11 +143,6 @@ export const HouseholdProvider = ({ children }) => {
       return;
     }
 
-    /*
-     * Immediately restore household from /auth/me.
-     * This prevents currentHousehold from being null
-     * during the refresh process.
-     */
     if (authHousehold?._id) {
       setCurrentHousehold(authHousehold);
     }
@@ -202,10 +156,7 @@ export const HouseholdProvider = ({ children }) => {
     setCurrentHousehold(household);
 
     if (household?._id) {
-      localStorage.setItem(
-        "selectedHouseholdId",
-        household._id.toString()
-      );
+      localStorage.setItem("selectedHouseholdId", household._id.toString());
     }
   };
 

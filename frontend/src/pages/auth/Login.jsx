@@ -3,9 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 
-// ==========================================
-// ICON COMPONENTS (Extracted for clean JSX)
-// ==========================================
+
 const LogoIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.12-3 2.5S10.343 13 12 13s3 1.12 3 2.5S13.657 18 12 18m0-10V6m0 12v-2m0 2a6 6 0 100-12 6 6 0 000 12z" />
@@ -51,9 +49,7 @@ const SpinnerIcon = ({ className }) => (
   </svg>
 );
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
+
 const FEATURES = [
   "Track household expenses in real time",
   "Automatically split bills and grocery shares",
